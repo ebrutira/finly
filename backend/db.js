@@ -8,5 +8,8 @@ const pool = new Pool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
 });
+pool.connect()
+    .then(() => console.log('Veritabanına bağlandı!'))
+    .catch((err) => console.error('Veritabanı bağlantı hatası:', err));
 
 module.exports = pool;
