@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Finly",
+    "slug": "finly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.finly.app"
+    },
+    "android": {
+      "package": "com.finly.app"
+    },
+    "scheme": "finly",
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}

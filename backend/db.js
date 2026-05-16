@@ -1,15 +1,9 @@
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
-const pool = new Pool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-});
-pool.connect()
-    .then(() => console.log('Veritabanına bağlandı!'))
-    .catch((err) => console.error('Veritabanı bağlantı hatası:', err));
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+);
 
-module.exports = pool;
+module.exports = supabase;
