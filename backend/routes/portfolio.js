@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { incrementQuest, setQuestProgress } = require('../helpers/questProgress');
 
 router.use(authMiddleware);
 
@@ -23,10 +24,24 @@ router.get('/', async (req, res) => {
 // ─── AL ──────────────────────────────────────────────────
 router.post('/buy', async (req, res) => {
     const { symbol, quantity, price } = req.body;
-    const total = quantity * price;
+    const total = parseFloat(quantity) * parseFloat(price);
     const sym = symbol.toUpperCase();
 
     try {
+        // Kullanıcının mevcut bakiyesini ve XP'sini çek
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('balance, xp, level')
+            .eq('id', req.userId)
+            .single();
+
+        if (userError) throw userError;
+
+        if (parseFloat(userData.balance) < total) {
+            return res.status(400).json({ error: 'Yetersiz bakiye.' });
+        }
+
+        // Portföyde bu varlık var mı?
         const { data: existing } = await supabase
             .from('portfolio')
             .select('*')
@@ -56,13 +71,43 @@ router.post('/buy', async (req, res) => {
             if (error) throw error;
         }
 
+        // İşlem kaydı
         const { error: tradeError } = await supabase
             .from('trades')
             .insert({ user_id: req.userId, symbol: sym, type: 'buy', quantity, price, total });
 
         if (tradeError) throw tradeError;
 
-        res.json({ message: `${sym} alındı.` });
+        // Bakiyeyi düş, XP ekle
+        const newXp = userData.xp + 10;
+        const newLevel = Math.floor(newXp / 100) + 1;
+        const newBalance = parseFloat(userData.balance) - total;
+
+        await supabase
+            .from('users')
+            .update({ balance: newBalance, xp: newXp, level: newLevel })
+            .eq('id', req.userId);
+
+        // Portföydeki farklı varlık sayısını çek → five_assets görevi için
+        const { data: allAssets } = await supabase
+            .from('portfolio')
+            .select('symbol')
+            .eq('user_id', req.userId);
+
+        const assetCount = allAssets ? allAssets.length : 0;
+
+        // Görev ilerlemesi
+        incrementQuest(req.userId, 'first_buy');
+        incrementQuest(req.userId, 'ten_trades');
+        incrementQuest(req.userId, 'daily_trade');
+        setQuestProgress(req.userId, 'five_assets', assetCount);
+
+        res.json({
+            message: `${sym} alındı.`,
+            balance: newBalance,
+            xp: newXp,
+            level: newLevel,
+        });
 
     } catch (err) {
         console.error(err);
@@ -73,10 +118,11 @@ router.post('/buy', async (req, res) => {
 // ─── SAT ─────────────────────────────────────────────────
 router.post('/sell', async (req, res) => {
     const { symbol, quantity, price } = req.body;
-    const total = quantity * price;
+    const total = parseFloat(quantity) * parseFloat(price);
     const sym = symbol.toUpperCase();
 
     try {
+        // Portföyde var mı?
         const { data: existing } = await supabase
             .from('portfolio')
             .select('*')
@@ -113,13 +159,38 @@ router.post('/sell', async (req, res) => {
             if (error) throw error;
         }
 
+        // İşlem kaydı
         const { error: tradeError } = await supabase
             .from('trades')
             .insert({ user_id: req.userId, symbol: sym, type: 'sell', quantity, price, total });
 
         if (tradeError) throw tradeError;
 
-        res.json({ message: `${sym} satıldı.` });
+        // Kullanıcının XP ve bakiyesini güncelle
+        const { data: userData } = await supabase
+            .from('users')
+            .select('balance, xp')
+            .eq('id', req.userId)
+            .single();
+
+        const newXp = userData.xp + 5;
+        const newLevel = Math.floor(newXp / 100) + 1;
+        const newBalance = parseFloat(userData.balance) + total;
+
+        await supabase
+            .from('users')
+            .update({ balance: newBalance, xp: newXp, level: newLevel })
+            .eq('id', req.userId);
+
+        incrementQuest(req.userId, 'ten_trades');
+        incrementQuest(req.userId, 'daily_trade');
+
+        res.json({
+            message: `${sym} satıldı.`,
+            balance: newBalance,
+            xp: newXp,
+            level: newLevel,
+        });
 
     } catch (err) {
         console.error(err);

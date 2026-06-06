@@ -17,6 +17,21 @@ app.use('/market', marketRoutes);
 const portfolioRoutes = require('./routes/portfolio');
 app.use('/portfolio', portfolioRoutes);
 
+const usersRoutes = require('./routes/users');
+app.use('/users', usersRoutes);
+
+const friendsRoutes = require('./routes/friends');
+app.use('/friends', friendsRoutes);
+
+const questsRoutes = require('./routes/quests');
+app.use('/quests', questsRoutes);
+
+const notificationsRoutes = require('./routes/notifications');
+app.use('/notifications', notificationsRoutes);
+
+const watchlistRoutes = require('./routes/watchlist');
+app.use('/watchlist', watchlistRoutes);
+
 // Test endpoint
 app.get('/', (req, res) => {
     res.json({ message: 'Finly backend çalışıyor!' });

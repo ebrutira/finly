@@ -1,0 +1,23 @@
+import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface ThemeState {
+  isDark: boolean;
+  toggle: () => void;
+  loadTheme: () => Promise<void>;
+}
+
+export const useThemeStore = create<ThemeState>((set, get) => ({
+  isDark: true,
+
+  toggle: () => {
+    const next = !get().isDark;
+    AsyncStorage.setItem('theme', next ? 'dark' : 'light');
+    set({ isDark: next });
+  },
+
+  loadTheme: async () => {
+    const saved = await AsyncStorage.getItem('theme');
+    if (saved) set({ isDark: saved === 'dark' });
+  },
+}));
