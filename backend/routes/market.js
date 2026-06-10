@@ -1,70 +1,94 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const YahooFinance = require('yahoo-finance2').default;
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
-// ─── KRİPTO (Binance) ────────────────────────────────────
-router.get('/crypto/:symbol', async (req, res) => {
-  const { symbol } = req.params; // örnek: BTCUSDT
-
+// ─── YARDIMCI: HISSE/ETF ANLİK FİYAT ────────────────────
+// Birincil: yahoo-finance2  |  Yedek: Finnhub
+async function fetchStockQuote(symbol) {
   try {
-    const response = await axios.get(
-      `https://api.binance.com/api/v3/ticker/price?symbol=${symbol.toUpperCase()}`
+    const q = await yahooFinance.quote(symbol);
+    return {
+      symbol: q.symbol,
+      price: q.regularMarketPrice,
+      change: q.regularMarketChangePercent ?? null,
+    };
+  } catch {
+    if (!process.env.FINNHUB_KEY) throw new Error('Fiyat alınamadı.');
+    const res = await axios.get(
+      `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${process.env.FINNHUB_KEY}`
     );
-    res.json(response.data);
-  } catch (err) {
-    res.status(500).json({ error: 'Kripto fiyatı alınamadı.' });
+    if (!res.data?.c) throw new Error('Fiyat alınamadı.');
+    return { symbol, price: res.data.c, change: res.data.dp ?? null };
   }
-});
+}
 
-// ─── HİSSE SENEDİ (Alpha Vantage) ────────────────────────
-router.get('/stock/:symbol', async (req, res) => {
-  const { symbol } = req.params; // örnek: AAPL
+// ─── YARDIMCI: HISSE/ETF GRAFİK VERİSİ ──────────────────
+// Birincil: yahoo-finance2 (intraday dahil)  |  Yedek: Finnhub (sadece daily)
+async function fetchStockCandles(symbol, period) {
+  const now = new Date();
+
+  const periodMap = {
+    '1S': { period1: new Date(now - 1 * 60 * 60 * 1000),       interval: '5m'  },
+    '1G': { period1: new Date(now - 24 * 60 * 60 * 1000),      interval: '1h'  },
+    '1H': { period1: new Date(now - 7 * 24 * 60 * 60 * 1000),  interval: '1d'  },
+    '1A': { period1: new Date(now - 30 * 24 * 60 * 60 * 1000), interval: '1d'  },
+    '1Y': { period1: new Date(now - 365 * 24 * 60 * 60 * 1000), interval: '1wk' },
+  };
+
+  const { period1, interval } = periodMap[period] ?? periodMap['1G'];
 
   try {
-    const response = await axios.get(
-      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol.toUpperCase()}&apikey=${process.env.ALPHA_VANTAGE_KEY}`
-    );
+    const result = await yahooFinance.chart(symbol, { period1, period2: now, interval });
+    const closes = (result.quotes ?? [])
+      .map((q) => q.close)
+      .filter((v) => v != null);
+    return closes;
+  } catch {
+    // Finnhub free tier'da candle yok (403) — boş dizi dön, uygulama çökmez
+    return [];
+  }
+}
 
-    const quote = response.data['Global Quote'];
-    if (!quote || !quote['05. price']) {
-      return res.status(404).json({ error: 'Hisse bulunamadı.' });
-    }
-
-    res.json({
-      symbol: quote['01. symbol'],
-      price: quote['05. price'],
-      change: quote['09. % change'],
-    });
+// ─── HISSE / ETF ANLİK FİYAT ─────────────────────────────
+router.get('/stock/:symbol', async (req, res) => {
+  try {
+    const data = await fetchStockQuote(req.params.symbol.toUpperCase());
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: 'Hisse fiyatı alınamadı.' });
   }
 });
 
-// ─── DÖVİZ (ExchangeRate) ─────────────────────────────────
-router.get('/currency/:from/:to', async (req, res) => {
-  const { from, to } = req.params; // örnek: USD/TRY
-
+// ─── HISSE / ETF GRAFİK GEÇMİŞİ ─────────────────────────
+router.get('/history/stock/:symbol', async (req, res) => {
   try {
-    const response = await axios.get(
-      `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_KEY}/pair/${from.toUpperCase()}/${to.toUpperCase()}`
+    const closes = await fetchStockCandles(
+      req.params.symbol.toUpperCase(),
+      req.query.period ?? '1G'
     );
-
-    res.json({
-      from: from.toUpperCase(),
-      to: to.toUpperCase(),
-      rate: response.data.conversion_rate,
-    });
+    res.json({ closes });
   } catch (err) {
-    res.status(500).json({ error: 'Döviz kuru alınamadı.' });
+    res.status(500).json({ error: 'Hisse geçmiş verisi alınamadı.' });
   }
 });
 
-// ─── TARİHSEL VERİ — KRİPTO (Binance Klines) ────────────
-// period: '1S'=1saat, '1G'=1gün, '1H'=1hafta, '1A'=1ay, '1Y'=1yıl
-router.get('/history/crypto/:symbol', async (req, res) => {
-  const { symbol } = req.params;
-  const { period = '1G' } = req.query;
+// ─── KRİPTO (Binance) — değişmedi ────────────────────────
+router.get('/crypto/:symbol', async (req, res) => {
+  try {
+    const response = await axios.get(
+      `https://api.binance.com/api/v3/ticker/price?symbol=${req.params.symbol.toUpperCase()}`
+    );
+    res.json(response.data);
+  } catch {
+    res.status(500).json({ error: 'Kripto fiyatı alınamadı.' });
+  }
+});
 
+// ─── KRİPTO GRAFİK GEÇMİŞİ (Binance Klines) — değişmedi ─
+router.get('/history/crypto/:symbol', async (req, res) => {
+  const { period = '1G' } = req.query;
   const config = {
     '1S': { interval: '5m',  limit: 12 },
     '1G': { interval: '1h',  limit: 24 },
@@ -72,48 +96,27 @@ router.get('/history/crypto/:symbol', async (req, res) => {
     '1A': { interval: '1d',  limit: 30 },
     '1Y': { interval: '1w',  limit: 52 },
   };
-
   const { interval, limit } = config[period] ?? config['1G'];
-
   try {
     const response = await axios.get(
-      `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${limit}`
+      `https://api.binance.com/api/v3/klines?symbol=${req.params.symbol.toUpperCase()}&interval=${interval}&limit=${limit}`
     );
-
-    // Binance kline: [openTime, open, high, low, close, volume, ...]
     const closes = response.data.map((k) => parseFloat(k[4]));
     res.json({ closes });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Kripto geçmiş verisi alınamadı.' });
   }
 });
 
-// ─── TARİHSEL VERİ — HİSSE (Alpha Vantage) ──────────────
-router.get('/history/stock/:symbol', async (req, res) => {
-  const { symbol } = req.params;
-  const { period = '1G' } = req.query;
-
-  // Alpha Vantage free tier: TIME_SERIES_DAILY (günlük, son 100 gün)
-  // Tüm periyotlar için DAILY kullanıp dilim alıyoruz (intraday premium gerektirir)
-  const sliceMap = { '1S': 5, '1G': 5, '1H': 7, '1A': 30, '1Y': 52 };
-  const slice = sliceMap[period] ?? 7;
-
+// ─── DÖVİZ (ExchangeRate) — değişmedi ────────────────────
+router.get('/currency/:from/:to', async (req, res) => {
   try {
     const response = await axios.get(
-      `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol.toUpperCase()}&outputsize=compact&apikey=${process.env.ALPHA_VANTAGE_KEY}`
+      `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_KEY}/pair/${req.params.from.toUpperCase()}/${req.params.to.toUpperCase()}`
     );
-
-    const series = response.data['Time Series (Daily)'];
-    if (!series) return res.status(404).json({ error: 'Veri bulunamadı.' });
-
-    const closes = Object.values(series)
-      .slice(0, slice)
-      .reverse()
-      .map((day) => parseFloat(day['4. close']));
-
-    res.json({ closes });
-  } catch (err) {
-    res.status(500).json({ error: 'Hisse geçmiş verisi alınamadı.' });
+    res.json({ from: req.params.from.toUpperCase(), to: req.params.to.toUpperCase(), rate: response.data.conversion_rate });
+  } catch {
+    res.status(500).json({ error: 'Döviz kuru alınamadı.' });
   }
 });
 

@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const supabase = require('../db');
+const { incrementQuest } = require('../helpers/questProgress');
 
 // ─── REGISTER ───────────────────────────────────────────
 router.post('/register', async (req, res) => {
@@ -58,13 +59,42 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Email veya şifre hatalı.' });
         }
 
+        // Günlük giriş serisi (streak) güncelle
+        const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        let streak = user.streak || 0;
+
+        if (!user.last_login) {
+            streak = 1;
+        } else if (user.last_login !== todayStr) {
+            const last = new Date(user.last_login + 'T00:00:00Z');
+            const today = new Date(todayStr + 'T00:00:00Z');
+            const diffDays = Math.round((today - last) / 86400000);
+            streak = diffDays === 1 ? streak + 1 : 1;
+        }
+
+        if (user.last_login !== todayStr) {
+            await supabase.from('users').update({ streak, last_login: todayStr }).eq('id', user.id);
+            incrementQuest(user.id, 'daily_login');
+        }
+
         const token = jwt.sign(
             { userId: user.id, email: user.email },
             process.env.JWT_SECRET,
             { expiresIn: '30d' }
         );
 
-        res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                balance: user.balance,
+                xp: user.xp,
+                level: user.level,
+                streak,
+            },
+        });
 
     } catch (err) {
         console.error(err);

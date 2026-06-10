@@ -85,6 +85,7 @@ export default function DashboardScreen() {
 
   const xp = user?.xp ?? 0;
   const level = user?.level ?? 1;
+  const streak = user?.streak ?? 0;
   const xpInLevel = xp % 100;
   const levelTitle = LEVEL_TITLES[level] ?? `Seviye ${level}`;
 
@@ -164,13 +165,21 @@ export default function DashboardScreen() {
             <Text style={[styles.greeting, { color: C.text3 }]}>Hoş geldin</Text>
             <Text style={[styles.userName, { color: C.text1 }]}>{firstName}</Text>
           </View>
-          <TouchableOpacity
-            style={[styles.notifBtn, { backgroundColor: C.bgCard, borderColor: C.border }]}
-            onPress={() => router.push('/notifications')}
-          >
-            <Ionicons name="notifications-outline" size={18} color={C.text2} />
-            <View style={styles.notifDot} />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            {streak > 0 && (
+              <View style={[styles.streakPill, { backgroundColor: C.bgCard, borderColor: C.border }]}>
+                <Ionicons name="flame" size={14} color="#FF8A3D" />
+                <Text style={[styles.streakText, { color: C.text2 }]}>{streak}</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.notifBtn, { backgroundColor: C.bgCard, borderColor: C.border }]}
+              onPress={() => router.push('/notifications')}
+            >
+              <Ionicons name="notifications-outline" size={18} color={C.text2} />
+              <View style={styles.notifDot} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Portfolio Hero */}
@@ -296,6 +305,12 @@ const styles = StyleSheet.create({
   },
   greeting: { fontFamily: 'DMSans_400Regular', fontSize: 11 },
   userName: { fontFamily: 'Syne_800ExtraBold', fontSize: 22 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  streakPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    height: 38, paddingHorizontal: 12, borderRadius: 13, borderWidth: 1,
+  },
+  streakText: { fontFamily: 'Syne_700Bold', fontSize: 13 },
   notifBtn: {
     width: 38, height: 38, borderRadius: 13,
     borderWidth: 1, alignItems: 'center', justifyContent: 'center',

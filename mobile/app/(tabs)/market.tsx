@@ -101,9 +101,7 @@ export default function MarketScreen() {
               : `/market/stock/${s.symbol}`;
           const res = await api.get(endpoint);
           const price = Number(res.data.price);
-          // Alpha Vantage change percent varsa kullan, yoksa null bırak
-          const changeRaw = res.data.change?.replace('%', '').replace('+', '');
-          const change = changeRaw ? parseFloat(changeRaw) : null;
+          const change = res.data.change != null ? Number(res.data.change) : null;
           return { ...s, price, change, loading: false };
         } catch {
           return { ...s, price: null, change: null, loading: false };
