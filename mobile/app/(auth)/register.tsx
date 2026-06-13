@@ -5,8 +5,7 @@ import {
   ScrollView, SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { register, login } from '../../services/auth';
-import { useAuthStore } from '../../store/authStore';
+import { register } from '../../services/auth';
 import { useColors } from '../../hooks/useColors';
 
 export default function RegisterScreen() {
@@ -15,7 +14,6 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { setAuth } = useAuthStore();
   const router = useRouter();
   const C = useColors();
 
@@ -25,9 +23,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await register(name, email, password);
-      const loginRes = await login(email, password);
-      setAuth(loginRes.data.token, loginRes.data.user);
-      router.replace('/(tabs)');
+      router.replace({ pathname: '/(auth)/verify-email', params: { email } });
     } catch (err: any) {
       Alert.alert('Hata', err.response?.data?.error || 'Kayıt başarısız.');
     } finally {

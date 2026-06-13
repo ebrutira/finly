@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert, Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useColors } from '../../hooks/useColors';
 import { useAuthStore } from '../../store/authStore';
 import {
@@ -53,6 +53,10 @@ export default function FriendsScreen() {
   }, []);
 
   useEffect(() => { load(); }, []);
+
+  useFocusEffect(useCallback(() => {
+    setSearch('');
+  }, []));
 
   const handleSendRequest = async () => {
     if (!addEmail.trim()) return;

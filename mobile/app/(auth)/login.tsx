@@ -34,6 +34,13 @@ export default function LoginScreen() {
       setAuth(res.data.token, res.data.user);
       router.replace('/(tabs)');
     } catch (err: any) {
+      if (err.response?.status === 403 && err.response?.data?.unverified) {
+        router.replace({
+          pathname: '/(auth)/verify-email',
+          params: { email: err.response.data.email },
+        });
+        return;
+      }
       Alert.alert('Hata', err.response?.data?.error || 'Giriş başarısız.');
     } finally {
       setLoading(false);

@@ -85,6 +85,19 @@ CREATE TABLE watchlist (
   UNIQUE(user_id, symbol)
 );
 
+-- ─── EMAIL DOĞRULAMA MİGRASYONU ─────────────────────────────────────────────
+-- Supabase SQL Editor'da çalıştır (varolan kullanıcıları doğrulanmış say):
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE;
+-- ALTER TABLE users ALTER COLUMN email_verified SET DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(100) NOT NULL,
+  otp VARCHAR(6) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE password_resets (
   id SERIAL PRIMARY KEY,
   email VARCHAR(100) NOT NULL,
@@ -98,4 +111,33 @@ INSERT INTO quest_definitions (key, name, description, total, xp_reward, icon) V
   ('first_buy',    'İlk Hisse Al',     'Herhangi bir hisse senedi satın al',   1, 50,  '↗'),
   ('five_assets',  '5 Farklı Varlık',  'Portföyüne 5 farklı varlık ekle',      5, 120, '◉'),
   ('ten_trades',   '10 İşlem Yap',     'Toplam 10 alım veya satım gerçekleştir', 10, 80, '≡'),
-  ('daily_trade',  'Günlük İşlem',     'Bugün en az bir işlem gerçekleştir',   1, 20,  '◇');
+  ('daily_trade',  'Günlük İşlem',     'Bugün en az bir işlem gerçekleştir',   1, 20,  '◇'),
+  ('daily_login',  'Günlük Giriş',     'Her gün uygulamaya giriş yap',         1, 10,  '★');
+
+-- ─── TÜRKÇE KARAKTER DÜZELTMESİ ─────────────────────────────────────────────
+-- Eğer görev isimleri bozuk görünüyorsa (ör: "GÃ¼nlÃ¼k") bu bloğu
+-- Supabase SQL Editor'da çalıştır:
+UPDATE quest_definitions SET
+  name        = 'İlk Hisse Al',
+  description = 'Herhangi bir hisse senedi satın al'
+WHERE key = 'first_buy';
+
+UPDATE quest_definitions SET
+  name        = '5 Farklı Varlık',
+  description = 'Portföyüne 5 farklı varlık ekle'
+WHERE key = 'five_assets';
+
+UPDATE quest_definitions SET
+  name        = '10 İşlem Yap',
+  description = 'Toplam 10 alım veya satım gerçekleştir'
+WHERE key = 'ten_trades';
+
+UPDATE quest_definitions SET
+  name        = 'Günlük İşlem',
+  description = 'Bugün en az bir işlem gerçekleştir'
+WHERE key = 'daily_trade';
+
+UPDATE quest_definitions SET
+  name        = 'Günlük Giriş',
+  description = 'Her gün uygulamaya giriş yap'
+WHERE key = 'daily_login';

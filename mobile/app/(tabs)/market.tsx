@@ -24,16 +24,44 @@ interface MarketItem {
 interface CurrencyItem {
   from: string;
   to: string;
+  name: string;
+  routeSymbol: string;
   rate: number | null;
+  change: number | null;
   loading: boolean;
 }
 
 const STOCKS: Omit<MarketItem, 'price' | 'loading'>[] = [
-  { symbol: 'AAPL',  name: 'Apple Inc.',      change: null, category: 'Teknoloji'   },
-  { symbol: 'NVDA',  name: 'Nvidia Corp.',    change: null, category: 'Yarı İletken' },
-  { symbol: 'META',  name: 'Meta Platforms',  change: null, category: 'Sosyal'      },
-  { symbol: 'MSFT',  name: 'Microsoft',       change: null, category: 'Teknoloji'   },
-  { symbol: 'GOOGL', name: 'Alphabet Inc.',   change: null, category: 'Teknoloji'   },
+  // Teknoloji
+  { symbol: 'AAPL',  name: 'Apple Inc.',        change: null, category: 'Teknoloji'    },
+  { symbol: 'MSFT',  name: 'Microsoft',          change: null, category: 'Teknoloji'    },
+  { symbol: 'GOOGL', name: 'Alphabet Inc.',      change: null, category: 'Teknoloji'    },
+  { symbol: 'META',  name: 'Meta Platforms',     change: null, category: 'Teknoloji'    },
+  { symbol: 'NVDA',  name: 'Nvidia Corp.',       change: null, category: 'Yari Iletken' },
+  { symbol: 'AMZN',  name: 'Amazon',             change: null, category: 'Teknoloji'    },
+  { symbol: 'TSLA',  name: 'Tesla Inc.',         change: null, category: 'Otomotiv'     },
+  { symbol: 'NFLX',  name: 'Netflix',            change: null, category: 'Medya'        },
+  { symbol: 'AMD',   name: 'AMD',                change: null, category: 'Yari Iletken' },
+  { symbol: 'ADBE',  name: 'Adobe Inc.',         change: null, category: 'Teknoloji'    },
+  { symbol: 'CRM',   name: 'Salesforce',         change: null, category: 'Teknoloji'    },
+  { symbol: 'ORCL',  name: 'Oracle Corp.',       change: null, category: 'Teknoloji'    },
+  // Finans
+  { symbol: 'JPM',   name: 'JPMorgan Chase',     change: null, category: 'Finans'       },
+  { symbol: 'V',     name: 'Visa Inc.',          change: null, category: 'Finans'       },
+  { symbol: 'MA',    name: 'Mastercard',         change: null, category: 'Finans'       },
+  { symbol: 'BAC',   name: 'Bank of America',    change: null, category: 'Finans'       },
+  // Saglik
+  { symbol: 'JNJ',   name: 'Johnson & Johnson',  change: null, category: 'Saglik'       },
+  { symbol: 'PFE',   name: 'Pfizer Inc.',        change: null, category: 'Saglik'       },
+  { symbol: 'UNH',   name: 'UnitedHealth',       change: null, category: 'Saglik'       },
+  // Enerji
+  { symbol: 'XOM',   name: 'ExxonMobil',         change: null, category: 'Enerji'       },
+  { symbol: 'CVX',   name: 'Chevron Corp.',      change: null, category: 'Enerji'       },
+  // Tuketim
+  { symbol: 'WMT',   name: 'Walmart',            change: null, category: 'Perakende'    },
+  { symbol: 'COST',  name: 'Costco',             change: null, category: 'Perakende'    },
+  { symbol: 'MCD',   name: "McDonald's",         change: null, category: 'Gida'         },
+  { symbol: 'KO',    name: 'Coca-Cola',          change: null, category: 'Gida'         },
 ];
 
 const CRYPTOS: Omit<MarketItem, 'price' | 'loading'>[] = [
@@ -51,11 +79,11 @@ const ETFS: Omit<MarketItem, 'price' | 'loading'>[] = [
 ];
 
 const CURRENCY_PAIRS = [
-  { from: 'USD', to: 'TRY', name: 'Dolar / Türk Lirası'  },
-  { from: 'EUR', to: 'TRY', name: 'Euro / Türk Lirası'   },
-  { from: 'EUR', to: 'USD', name: 'Euro / Dolar'          },
-  { from: 'GBP', to: 'USD', name: 'Sterlin / Dolar'       },
-  { from: 'JPY', to: 'USD', name: 'Yen / Dolar'           },
+  { from: 'USD', to: 'TRY', name: 'Dolar / Türk Lirası',  routeSymbol: 'USDTRY' },
+  { from: 'EUR', to: 'TRY', name: 'Euro / Türk Lirası',   routeSymbol: 'EURTRY' },
+  { from: 'EUR', to: 'USD', name: 'Euro / Dolar',          routeSymbol: 'EURUSD' },
+  { from: 'GBP', to: 'USD', name: 'Sterlin / Dolar',       routeSymbol: 'GBPUSD' },
+  { from: 'JPY', to: 'USD', name: 'Yen / Dolar',           routeSymbol: 'JPYUSD' },
 ];
 
 export default function MarketScreen() {
@@ -69,15 +97,15 @@ export default function MarketScreen() {
 
   const loadItems = async (tab: TabKey) => {
     if (tab === 'Döviz') {
-      setCurrencies(CURRENCY_PAIRS.map((p) => ({ ...p, rate: null, loading: true })));
+      setCurrencies(CURRENCY_PAIRS.map((p) => ({ ...p, rate: null, change: null, loading: true })));
 
       const fetched = await Promise.all(
         CURRENCY_PAIRS.map(async (p) => {
           try {
-            const res = await api.get(`/market/currency/${p.from}/${p.to}`);
-            return { ...p, rate: res.data.rate, loading: false };
+            const res = await api.get(`/market/forex/${p.routeSymbol}`);
+            return { ...p, rate: res.data.price, change: res.data.change ?? null, loading: false };
           } catch {
-            return { ...p, rate: null, loading: false };
+            return { ...p, rate: null, change: null, loading: false };
           }
         })
       );
@@ -122,9 +150,15 @@ export default function MarketScreen() {
       i.symbol.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredCurrencies = currencies.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredCurrencies = currencies.filter((c) => {
+    const q = search.toLowerCase();
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.from.toLowerCase().includes(q) ||
+      c.to.toLowerCase().includes(q) ||
+      c.routeSymbol.toLowerCase().includes(q)
+    );
+  });
 
   const tabs: TabKey[] = ['Hisseler', 'Kripto', 'ETF', 'Döviz'];
 
@@ -195,9 +229,9 @@ export default function MarketScreen() {
                   {displaySymbol.slice(0, 4)}
                 </Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.itemName, { color: C.text1 }]}>{item.name}</Text>
-                <Text style={[styles.itemSub, { color: C.textMuted }]}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.itemName, { color: C.text1 }]} numberOfLines={1}>{item.name}</Text>
+                <Text style={[styles.itemSub, { color: C.textMuted }]} numberOfLines={1}>
                   {displaySymbol} · {item.category}
                 </Text>
               </View>
@@ -237,31 +271,56 @@ export default function MarketScreen() {
         })}
 
         {/* Döviz */}
-        {activeTab === 'Döviz' && filteredCurrencies.map((c) => (
-          <View
-            key={`${c.from}${c.to}`}
-            style={[styles.card, { backgroundColor: C.bgCard, borderColor: C.border }]}
-          >
-            <View style={[styles.logo, { backgroundColor: C.bg2, borderColor: C.border }]}>
-              <Text style={[styles.logoText, { color: C.text3 }]}>{c.from}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.itemName, { color: C.text1 }]}>{c.name}</Text>
-              <Text style={[styles.itemSub, { color: C.textMuted }]}>
-                {c.from}/{c.to}
-              </Text>
-            </View>
-            {c.loading ? (
-              <ActivityIndicator size="small" color={C.primary} />
-            ) : (
-              <Text style={[styles.price, { color: C.text1 }]}>
-                {c.rate != null
-                  ? c.rate.toLocaleString('en-US', { maximumFractionDigits: 4 })
-                  : '—'}
-              </Text>
-            )}
-          </View>
-        ))}
+        {activeTab === 'Döviz' && filteredCurrencies.map((c) => {
+          const isUp = c.change !== null ? c.change >= 0 : true;
+          return (
+            <TouchableOpacity
+              key={`${c.from}${c.to}`}
+              style={[styles.card, { backgroundColor: C.bgCard, borderColor: C.border }]}
+              onPress={() => router.push(`/stock/${c.routeSymbol}` as any)}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.logo, { backgroundColor: C.bg2, borderColor: C.border }]}>
+                <Text style={[styles.logoText, { color: C.text3 }]}>{c.from}</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.itemName, { color: C.text1 }]} numberOfLines={1}>{c.name}</Text>
+                <Text style={[styles.itemSub, { color: C.textMuted }]}>{c.from}/{c.to}</Text>
+              </View>
+              <View style={styles.spark}>
+                {[40, 60, 80, 70, 100].map((h, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.sparkBar,
+                      { height: `${h}%`, backgroundColor: isUp ? C.primary : C.danger, opacity: isUp ? 1 : 0.7 },
+                    ]}
+                  />
+                ))}
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                {c.loading ? (
+                  <ActivityIndicator size="small" color={C.primary} />
+                ) : (
+                  <>
+                    <Text style={[styles.price, { color: C.text1 }]}>
+                      {c.rate != null
+                        ? c.rate.toLocaleString('en-US', { maximumFractionDigits: 4 })
+                        : '—'}
+                    </Text>
+                    {c.change !== null && (
+                      <View style={[styles.badge, { backgroundColor: isUp ? C.successBg : C.dangerBg }]}>
+                        <Text style={[styles.badgeText, { color: isUp ? C.success : C.danger }]}>
+                          {isUp ? '+' : ''}{c.change.toFixed(2)}%
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -281,8 +340,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 11,
   },
   searchInput: { flex: 1, fontFamily: 'DMSans_400Regular', fontSize: 13 },
-  tabsScroll: { maxHeight: 48 },
-  tabsContent: { gap: 8, paddingHorizontal: 16, paddingBottom: 14 },
+  tabsScroll: { flexShrink: 0, flexGrow: 0 },
+  tabsContent: { gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
   tabPill: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   tabText: { fontFamily: 'DMSans_600SemiBold', fontSize: 11 },
   card: {

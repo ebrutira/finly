@@ -4,9 +4,33 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '../../hooks/useColors';
 import { useAuthStore } from '../../store/authStore';
 import { getQuests } from '../../services/quests';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+const QUEST_ICONS: Record<string, IoniconsName> = {
+  first_buy:        'cart-outline',
+  first_sell:       'cash-outline',
+  portfolio_5:      'briefcase-outline',
+  portfolio_10:     'briefcase',
+  daily_login:      'sunny-outline',
+  buy_10:           'trending-up-outline',
+  buy_50:           'trending-up',
+  profit_trade:     'diamond-outline',
+  watchlist_add:    'bookmark-outline',
+  crypto_buy:       'logo-bitcoin',
+  etf_buy:          'layers-outline',
+  forex_buy:        'globe-outline',
+  streak_3:         'flame-outline',
+  streak_7:         'flame',
+  friend_add:       'people-outline',
+  leaderboard_top3: 'trophy-outline',
+};
+
+const DEFAULT_QUEST_ICON: IoniconsName = 'star-outline';
 
 interface Quest {
   id: number;
@@ -95,9 +119,17 @@ export default function QuestsScreen() {
             >
               {completedQuests.map((q) => (
                 <View key={q.id} style={styles.badgeItem}>
-                  <View style={[styles.badgeCircle, { backgroundColor: `${C.primary}26`, borderColor: C.primary }]}>
-                    <Text style={[styles.badgeIcon, { color: C.primaryDim }]}>{q.icon}</Text>
-                  </View>
+                  <LinearGradient
+                    colors={['#3A9BAB', '#B5DDE3']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={styles.badgeCircle}
+                  >
+                    <Ionicons
+                      name={QUEST_ICONS[q.key] ?? DEFAULT_QUEST_ICON}
+                      size={22}
+                      color="#071215"
+                    />
+                  </LinearGradient>
                   <Text style={[styles.badgeName, { color: C.primaryDim }]} numberOfLines={2}>
                     {q.name}
                   </Text>
@@ -125,7 +157,11 @@ export default function QuestsScreen() {
               activeOpacity={0.75}
             >
               <View style={[styles.questIcon, { backgroundColor: `${C.primary}1A`, borderColor: `${C.primary}33` }]}>
-                <Text style={[styles.questIconText, { color: C.primaryDim }]}>{q.icon}</Text>
+                <Ionicons
+                  name={QUEST_ICONS[q.key] ?? DEFAULT_QUEST_ICON}
+                  size={18}
+                  color={C.primaryDim}
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.questName, { color: C.text1 }]}>{q.name}</Text>
@@ -183,8 +219,12 @@ const styles = StyleSheet.create({
   },
   badgesRow: { paddingHorizontal: 16, gap: 14, paddingBottom: 4 },
   badgeItem: { alignItems: 'center', gap: 6, width: 64 },
-  badgeCircle: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
-  badgeIcon: { fontSize: 20 },
+  badgeCircle: {
+    width: 54, height: 54, borderRadius: 27,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#3A9BAB', shadowOpacity: 0.35, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 }, elevation: 5,
+  },
   badgeName: { fontFamily: 'DMSans_400Regular', fontSize: 9, textAlign: 'center' },
   emptyWrap: { alignItems: 'center', paddingVertical: 40, gap: 10 },
   emptyText: { fontFamily: 'Syne_600SemiBold', fontSize: 16 },
@@ -194,7 +234,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 18, padding: 14, gap: 12,
   },
   questIcon: { width: 40, height: 40, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  questIconText: { fontSize: 16, fontWeight: '700' },
   questName: { fontFamily: 'DMSans_600SemiBold', fontSize: 13 },
   questDesc: { fontFamily: 'DMSans_400Regular', fontSize: 10, marginTop: 2 },
   questProgressWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },

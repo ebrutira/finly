@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Modal, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -14,6 +14,7 @@ import { useColors } from '../../hooks/useColors';
 type TimeTab = '1S' | '1H' | '1G' | '1A' | '1Y';
 
 const CRYPTO_SYMBOLS = new Set(['BTC', 'ETH', 'XRP', 'SOL', 'BNB', 'ADA']);
+const FOREX_PAIRS = new Set(['USDTRY', 'EURTRY', 'EURUSD', 'GBPUSD', 'JPYUSD']);
 
 function normalizeHeights(closes: number[]): number[] {
   if (closes.length === 0) return [];
@@ -32,6 +33,8 @@ export default function StockDetailScreen() {
 
   const sym = symbol?.toUpperCase() ?? '';
   const isCrypto = CRYPTO_SYMBOLS.has(sym);
+  const isForex = FOREX_PAIRS.has(sym);
+  const displayName = isForex ? `${sym.slice(0, 3)}/${sym.slice(3)}` : sym;
 
   const [price, setPrice] = useState<number | null>(null);
   const [priceLoading, setPriceLoading] = useState(true);
@@ -45,9 +48,25 @@ export default function StockDetailScreen() {
   const [inWatchlist, setInWatchlist] = useState(false);
   const [watchlistLoading, setWatchlistLoading] = useState(false);
 
+  type ModalType = 'success' | 'error' | 'confirm';
+  const [modal, setModal] = useState<{
+    visible: boolean;
+    type: ModalType;
+    title: string;
+    message: string;
+    xp?: number;
+    onConfirm?: () => void;
+  }>({ visible: false, type: 'success', title: '', message: '' });
+
+  const closeModal = () => setModal((m) => ({ ...m, visible: false }));
+
   // Anlık fiyat
   useEffect(() => {
-    const endpoint = isCrypto ? `/market/crypto/${sym}USDT` : `/market/stock/${sym}`;
+    const endpoint = isForex
+      ? `/market/forex/${sym}`
+      : isCrypto
+      ? `/market/crypto/${sym}USDT`
+      : `/market/stock/${sym}`;
     api.get(endpoint)
       .then((res) => setPrice(Number(res.data.price)))
       .catch(() => setPrice(null))
@@ -70,7 +89,9 @@ export default function StockDetailScreen() {
   const fetchHistory = useCallback(async (period: TimeTab) => {
     setChartLoading(true);
     try {
-      const endpoint = isCrypto
+      const endpoint = isForex
+        ? `/market/history/forex/${sym}?period=${period}`
+        : isCrypto
         ? `/market/history/crypto/${sym}USDT?period=${period}`
         : `/market/history/stock/${sym}?period=${period}`;
       const res = await api.get(endpoint);
@@ -80,7 +101,7 @@ export default function StockDetailScreen() {
     } finally {
       setChartLoading(false);
     }
-  }, [sym, isCrypto]);
+  }, [sym, isCrypto, isForex]);
 
   useEffect(() => { fetchHistory(activeTime); }, [activeTime]);
 
@@ -95,58 +116,74 @@ export default function StockDetailScreen() {
         setInWatchlist(true);
       }
     } catch (err: any) {
-      Alert.alert('Hata', err.response?.data?.error || 'İşlem başarısız.');
+      setModal({ visible: true, type: 'error', title: 'Hata', message: err.response?.data?.error || 'İşlem başarısız.' });
     } finally {
       setWatchlistLoading(false);
     }
   };
 
   const handleBuy = async () => {
-    if (!price) return Alert.alert('Hata', 'Fiyat bilgisi alınamadı.');
+    if (!price) {
+      setModal({ visible: true, type: 'error', title: 'Hata', message: 'Fiyat bilgisi alınamadı.' });
+      return;
+    }
     setTrading(true);
     try {
       const res = await api.post('/portfolio/buy', { symbol: sym, quantity, price });
       if (res.data.balance !== undefined) {
         updateUser({ balance: res.data.balance, xp: res.data.xp, level: res.data.level });
       }
-      Alert.alert(
-        '✅ Başarılı',
-        `${quantity} adet ${sym} satın alındı!\nToplam: $${(price * quantity).toFixed(2)}\n+10 XP kazandın!`
-      );
+      setQuantity(1);
+      setModal({
+        visible: true,
+        type: 'success',
+        title: 'Alım Başarılı!',
+        message: `${quantity} adet ${displayName} portföyüne eklendi.\nToplam: $${(price * quantity).toFixed(2)}`,
+        xp: 10,
+      });
     } catch (err: any) {
-      Alert.alert('Hata', err.response?.data?.error || 'Alım işlemi başarısız.');
+      setModal({ visible: true, type: 'error', title: 'Alım Başarısız', message: err.response?.data?.error || 'Alım işlemi gerçekleştirilemedi.' });
     } finally {
       setTrading(false);
     }
   };
 
-  const handleSell = async () => {
-    if (!price) return Alert.alert('Hata', 'Fiyat bilgisi alınamadı.');
-    Alert.alert(
-      'Satışı Onayla',
-      `${quantity} adet ${sym} satmak istediğine emin misin?\nToplam: $${(price * quantity).toFixed(2)}`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sat',
-          style: 'destructive',
-          onPress: async () => {
-            setTrading(true);
-            try {
-              const res = await api.post('/portfolio/sell', { symbol: sym, quantity, price });
-              if (res.data.balance !== undefined) {
-                updateUser({ balance: res.data.balance, xp: res.data.xp, level: res.data.level });
-              }
-              Alert.alert('✅ Başarılı', `${quantity} adet ${sym} satıldı!\n+5 XP kazandın!`);
-            } catch (err: any) {
-              Alert.alert('Hata', err.response?.data?.error || 'Satış işlemi başarısız.');
-            } finally {
-              setTrading(false);
-            }
-          },
-        },
-      ]
-    );
+  const executeSell = async () => {
+    if (!price) return;
+    closeModal();
+    setTrading(true);
+    try {
+      const res = await api.post('/portfolio/sell', { symbol: sym, quantity, price });
+      if (res.data.balance !== undefined) {
+        updateUser({ balance: res.data.balance, xp: res.data.xp, level: res.data.level });
+      }
+      setQuantity(1);
+      setModal({
+        visible: true,
+        type: 'success',
+        title: 'Satış Başarılı!',
+        message: `${quantity} adet ${displayName} portföyünden satıldı.\nToplam: $${(price * quantity).toFixed(2)}`,
+        xp: 5,
+      });
+    } catch (err: any) {
+      setModal({ visible: true, type: 'error', title: 'Satış Başarısız', message: err.response?.data?.error || 'Satış işlemi gerçekleştirilemedi.' });
+    } finally {
+      setTrading(false);
+    }
+  };
+
+  const handleSell = () => {
+    if (!price) {
+      setModal({ visible: true, type: 'error', title: 'Hata', message: 'Fiyat bilgisi alınamadı.' });
+      return;
+    }
+    setModal({
+      visible: true,
+      type: 'confirm',
+      title: 'Satışı Onayla',
+      message: `${quantity} adet ${displayName} satmak istediğine emin misin?\nToplam: $${(price * quantity).toFixed(2)}`,
+      onConfirm: executeSell,
+    });
   };
 
   const timeTabs: TimeTab[] = ['1S', '1G', '1H', '1A', '1Y'];
@@ -171,9 +208,9 @@ export default function StockDetailScreen() {
             <Ionicons name="arrow-back" size={18} color={C.text2} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.detailName, { color: C.text1 }]}>{sym}</Text>
+            <Text style={[styles.detailName, { color: C.text1 }]}>{displayName}</Text>
             <Text style={[styles.detailTicker, { color: C.textMuted }]}>
-              {isCrypto ? 'Kripto · Binance' : 'NASDAQ'}
+              {isForex ? 'Döviz · Forex' : isCrypto ? 'Kripto · Binance' : 'NASDAQ'}
             </Text>
           </View>
           <TouchableOpacity
@@ -279,7 +316,19 @@ export default function StockDetailScreen() {
             >
               <Text style={[styles.qtyBtnText, { color: C.text1 }]}>−</Text>
             </TouchableOpacity>
-            <Text style={[styles.qtyValue, { color: C.text1 }]}>{quantity}</Text>
+            <TextInput
+              style={[styles.qtyValue, { color: C.text1 }]}
+              value={quantity.toString()}
+              onChangeText={(v) => {
+                const n = parseInt(v, 10);
+                if (!isNaN(n) && n >= 1) setQuantity(n);
+                else if (v === '') setQuantity(1);
+              }}
+              keyboardType="numeric"
+              selectTextOnFocus
+              selectionColor={C.primary}
+              maxLength={5}
+            />
             <TouchableOpacity
               style={[styles.qtyBtn, { backgroundColor: C.bg2, borderColor: C.border }]}
               onPress={() => setQuantity(quantity + 1)}
@@ -316,6 +365,54 @@ export default function StockDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Trade Modal */}
+      <Modal visible={modal.visible} transparent animationType="fade" onRequestClose={closeModal}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: C.bgCard, borderColor: modal.type === 'error' ? `${C.danger}4D` : modal.type === 'confirm' ? C.border : `${C.primary}4D` }]}>
+
+            {/* Icon */}
+            <View style={[styles.modalIcon, { backgroundColor: modal.type === 'error' ? C.dangerBg : modal.type === 'confirm' ? `${C.primary}15` : `${C.primary}20` }]}>
+              <Ionicons
+                name={modal.type === 'error' ? 'close' : modal.type === 'confirm' ? 'alert' : 'checkmark'}
+                size={26}
+                color={modal.type === 'error' ? C.danger : C.primaryDim}
+              />
+            </View>
+
+            {/* Title */}
+            <Text style={[styles.modalTitle, { color: C.text1 }]}>{modal.title}</Text>
+
+            {/* Message */}
+            <Text style={[styles.modalMessage, { color: C.textMuted }]}>{modal.message}</Text>
+
+            {/* XP Badge */}
+            {modal.xp != null && (
+              <View style={[styles.xpBadge, { backgroundColor: `${C.primary}20`, borderColor: `${C.primary}40` }]}>
+                <Text style={[styles.xpBadgeText, { color: C.primaryDim }]}>+{modal.xp} XP kazandın!</Text>
+              </View>
+            )}
+
+            {/* Buttons */}
+            {modal.type === 'confirm' ? (
+              <View style={styles.modalBtns}>
+                <TouchableOpacity style={[styles.modalBtnSecondary, { borderColor: C.border }]} onPress={closeModal}>
+                  <Text style={[styles.modalBtnSecondaryText, { color: C.textMuted }]}>İptal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalBtnDanger, { backgroundColor: C.dangerBg, borderColor: `${C.danger}4D` }]} onPress={modal.onConfirm}>
+                  <Text style={[styles.modalBtnDangerText, { color: C.danger }]}>Sat</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={[styles.modalBtnPrimary, { backgroundColor: C.primary }]} onPress={closeModal}>
+                <Text style={[styles.modalBtnPrimaryText, { color: C.bg }]}>
+                  {modal.type === 'error' ? 'Tamam' : 'Harika!'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -366,4 +463,38 @@ const styles = StyleSheet.create({
   buyBtnText: { fontFamily: 'Syne_700Bold', fontSize: 14 },
   sellBtn: { flex: 1, borderWidth: 1, borderRadius: 16, paddingVertical: 15, alignItems: 'center' },
   sellBtnText: { fontFamily: 'Syne_700Bold', fontSize: 14 },
+
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24,
+  },
+  modalCard: {
+    width: '100%', borderWidth: 1, borderRadius: 24,
+    padding: 28, alignItems: 'center', gap: 12,
+  },
+  modalIcon: {
+    width: 56, height: 56, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  modalIconText: { fontSize: 22, fontFamily: 'Syne_800ExtraBold' },
+  modalTitle: { fontFamily: 'Syne_800ExtraBold', fontSize: 20, textAlign: 'center' },
+  modalMessage: { fontFamily: 'DMSans_400Regular', fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  xpBadge: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, marginTop: 2 },
+  xpBadgeText: { fontFamily: 'DMSans_600SemiBold', fontSize: 13 },
+  modalBtns: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 4 },
+  modalBtnSecondary: {
+    flex: 1, borderWidth: 1, borderRadius: 14,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  modalBtnSecondaryText: { fontFamily: 'Syne_700Bold', fontSize: 14 },
+  modalBtnDanger: {
+    flex: 1, borderWidth: 1, borderRadius: 14,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  modalBtnDangerText: { fontFamily: 'Syne_700Bold', fontSize: 14 },
+  modalBtnPrimary: {
+    width: '100%', borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center', marginTop: 4,
+  },
+  modalBtnPrimaryText: { fontFamily: 'Syne_700Bold', fontSize: 14 },
 });

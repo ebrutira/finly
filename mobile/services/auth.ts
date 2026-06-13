@@ -8,6 +8,12 @@ export const login = (email: string, password: string) =>
 
 export const getMe = () => api.get('/auth/me');
 
+export const verifyEmail = (email: string, otp: string) =>
+  api.post('/auth/verify-email', { email, otp });
+
+export const resendVerification = (email: string) =>
+  api.post('/auth/resend-verification', { email });
+
 export const forgotPassword = (email: string) =>
   api.post('/auth/forgot-password', { email });
 

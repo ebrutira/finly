@@ -108,7 +108,7 @@ router.get('/history/crypto/:symbol', async (req, res) => {
   }
 });
 
-// ─── DÖVİZ (ExchangeRate) — değişmedi ────────────────────
+// ─── DÖVİZ (ExchangeRate) — eski endpoint, geriye uyumluluk ─
 router.get('/currency/:from/:to', async (req, res) => {
   try {
     const response = await axios.get(
@@ -117,6 +117,30 @@ router.get('/currency/:from/:to', async (req, res) => {
     res.json({ from: req.params.from.toUpperCase(), to: req.params.to.toUpperCase(), rate: response.data.conversion_rate });
   } catch {
     res.status(500).json({ error: 'Döviz kuru alınamadı.' });
+  }
+});
+
+// ─── DÖVİZ ANLİK FİYAT + DEĞİŞİM (Yahoo Finance) ────────
+// pair: USDTRY, EURUSD vs. → Yahoo sembolü: USDTRY=X
+router.get('/forex/:pair', async (req, res) => {
+  try {
+    const data = await fetchStockQuote(`${req.params.pair.toUpperCase()}=X`);
+    res.json({ pair: req.params.pair.toUpperCase(), price: data.price, change: data.change });
+  } catch {
+    res.status(500).json({ error: 'Döviz kuru alınamadı.' });
+  }
+});
+
+// ─── DÖVİZ GRAFİK GEÇMİŞİ (Yahoo Finance) ────────────────
+router.get('/history/forex/:pair', async (req, res) => {
+  try {
+    const closes = await fetchStockCandles(
+      `${req.params.pair.toUpperCase()}=X`,
+      req.query.period ?? '1G'
+    );
+    res.json({ closes });
+  } catch {
+    res.status(500).json({ error: 'Döviz geçmiş verisi alınamadı.' });
   }
 });
 

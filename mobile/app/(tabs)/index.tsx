@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
@@ -134,7 +134,11 @@ export default function DashboardScreen() {
     }
   };
 
-  useEffect(() => { fetchPortfolio(); }, []);
+  // Token AsyncStorage'dan yüklenince çalışır (ilk açılış)
+  useEffect(() => { if (user) fetchPortfolio(); }, [user?.id]);
+
+  // Tab'a her dönüşte yeniler
+  useFocusEffect(useCallback(() => { if (user) fetchPortfolio(); }, [user?.id]));
 
   if (loading) {
     return (
