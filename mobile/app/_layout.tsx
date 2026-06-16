@@ -20,20 +20,30 @@ SplashScreen.preventAutoHideAsync();
 
 function AuthGuard() {
   const { token, isLoading, loadFromStorage, updateUser } = useAuthStore();
+  const { themeLoaded, hasSetTheme } = useThemeStore();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => { loadFromStorage(); }, []);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (!themeLoaded) return;
+    if (!hasSetTheme) {
+      router.replace('/(auth)/theme-select');
+    }
+  }, [themeLoaded, hasSetTheme]);
+
+  useEffect(() => {
+    if (isLoading || !themeLoaded || !hasSetTheme) return;
     const inAuthGroup = segments[0] === '(auth)';
+    const onThemeSelect = segments[1] === 'theme-select';
+    if (onThemeSelect) return;
     if (!token && !inAuthGroup) {
       router.replace('/(auth)/splash');
     } else if (token && inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [token, isLoading, segments]);
+  }, [token, isLoading, segments, themeLoaded, hasSetTheme]);
 
   // Token geçerliyken tam profili çek (balance, xp, level dahil)
   useEffect(() => {

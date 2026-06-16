@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
-import { useThemeStore } from '../../store/themeStore';
+import { useThemeStore, ACCENT_PRESETS } from '../../store/themeStore';
 import { useColors } from '../../hooks/useColors';
 import { getFriends } from '../../services/friends';
 import { getQuests } from '../../services/quests';
@@ -15,7 +15,7 @@ import { updateProfile, changePassword } from '../../services/users';
 
 export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuthStore();
-  const { isDark, toggle } = useThemeStore();
+  const { isDark, toggle, accentKey, setAccentKey } = useThemeStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const C = useColors();
@@ -167,6 +167,28 @@ export default function ProfileScreen() {
               ) : null}
             </TouchableOpacity>
           ))}
+
+          {/* Renk teması */}
+          <View style={[styles.settingRow, { borderBottomColor: `${C.border}88` }]}>
+            <View style={[styles.settingIcon, { backgroundColor: C.bgCard, borderColor: C.border }]}>
+              <Ionicons name="color-palette-outline" size={15} color={C.text3} />
+            </View>
+            <Text style={[styles.settingLabel, { color: C.text1 }]}>Vurgu Rengi</Text>
+            <View style={styles.swatchRow}>
+              {ACCENT_PRESETS.map((a) => (
+                <TouchableOpacity
+                  key={a.key}
+                  style={[
+                    styles.swatch,
+                    { backgroundColor: a.color },
+                    accentKey === a.key && { borderWidth: 2, borderColor: C.text1 },
+                  ]}
+                  onPress={() => setAccentKey(a.key)}
+                  activeOpacity={0.75}
+                />
+              ))}
+            </View>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -271,4 +293,6 @@ const styles = StyleSheet.create({
   modalCancelText: { fontFamily: 'DMSans_600SemiBold', fontSize: 14 },
   modalConfirmBtn: { flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   modalConfirmText: { fontFamily: 'Syne_700Bold', fontSize: 14 },
+  swatchRow: { flexDirection: 'row', gap: 7 },
+  swatch: { width: 22, height: 22, borderRadius: 11 },
 });

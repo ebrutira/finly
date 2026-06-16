@@ -8,9 +8,6 @@
     "updates": {
       "enabled": false
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -18,14 +15,26 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.finly.app"
     },
+    "icon": "./assets/icon.png",
     "android": {
-      "package": "com.finly.app"
+      "package": "com.finly.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#071215"
+      }
     },
     "scheme": "finly",
     "plugins": [
       "expo-router",
       "expo-asset",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3fd73e7b-1f33-4d4a-8d58-fdb03c8c3ac3"
+      }
+    },
+    "owner": "ebrutiras"
   }
 }

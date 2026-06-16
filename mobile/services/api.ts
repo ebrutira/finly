@@ -2,7 +2,12 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import { useAuthStore } from '../store/authStore';
 
+// Render/cloud deploy yapıldığında buraya URL'i yaz, '' bırakırsan dev modunda otomatik tespit eder
+const PRODUCTION_API_URL = 'https://finly-jfrz.onrender.com';
+
 function getApiUrl(): string {
+  if (PRODUCTION_API_URL) return PRODUCTION_API_URL;
+
   // Expo Go fiziksel telefonda: Metro bundler'ın host IP'sini al
   const hostUri =
     Constants.expoConfig?.hostUri ??
