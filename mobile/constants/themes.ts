@@ -17,6 +17,7 @@ export const darkTheme = {
   danger: '#FF5C7A',
   successBg: 'rgba(79,255,176,0.1)',
   dangerBg: 'rgba(255,92,122,0.1)',
+  warning: '#F59E0B',
   navBg: '#071215',
   heroTop: '#0E2A2E',
 };
@@ -40,6 +41,7 @@ export const lightTheme = {
   danger: '#E03060',
   successBg: 'rgba(0,153,102,0.08)',
   dangerBg: 'rgba(224,48,96,0.08)',
+  warning: '#D97706',
   navBg: '#FFFFFF',
   heroTop: '#D8EFF3',
 };

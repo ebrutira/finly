@@ -29,7 +29,7 @@ export default function StockDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const C = useColors();
-  const { updateUser } = useAuthStore();
+  const { updateUser, user } = useAuthStore();
 
   const sym = symbol?.toUpperCase() ?? '';
   const isCrypto = CRYPTO_SYMBOLS.has(sym);
@@ -187,9 +187,12 @@ export default function StockDetailScreen() {
   };
 
   const timeTabs: TimeTab[] = ['1S', '1G', '1H', '1A', '1Y'];
+  const balance = user?.balance ?? 0;
+  const totalCostNum = price ? price * quantity : 0;
   const totalCost = price
-    ? (price * quantity).toLocaleString('en-US', { maximumFractionDigits: 2 })
+    ? totalCostNum.toLocaleString('en-US', { maximumFractionDigits: 2 })
     : '—';
+  const insufficientBalance = price != null && totalCostNum > balance;
 
   const chartIsUp = chartData.length >= 2
     ? chartData[chartData.length - 1] >= chartData[0]
@@ -337,16 +340,33 @@ export default function StockDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.tradeInfo, { color: C.textMuted }]}>
-            Toplam:{' '}
-            <Text style={[styles.tradeInfoVal, { color: C.text1 }]}>${totalCost}</Text>
-          </Text>
+          <View style={styles.tradeInfoRow}>
+            <Text style={[styles.tradeInfo, { color: C.textMuted }]}>
+              Toplam:{' '}
+              <Text style={[styles.tradeInfoVal, { color: C.text1 }]}>${totalCost}</Text>
+            </Text>
+            <View style={[styles.balanceChip, { backgroundColor: C.bgCard, borderColor: C.border }]}>
+              <Ionicons name="wallet-outline" size={11} color={C.textMuted} />
+              <Text style={[styles.balanceChipText, { color: C.textMuted }]}>
+                ${balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </Text>
+            </View>
+          </View>
+
+          {insufficientBalance && (
+            <View style={[styles.warningRow, { backgroundColor: `${C.warning}18`, borderColor: `${C.warning}40` }]}>
+              <Ionicons name="warning-outline" size={13} color={C.warning} />
+              <Text style={[styles.warningText, { color: C.warning }]}>
+                Yetersiz bakiye — ${(totalCostNum - balance).toLocaleString('en-US', { maximumFractionDigits: 0 })} eksik
+              </Text>
+            </View>
+          )}
 
           <View style={styles.tradeBtns}>
             <TouchableOpacity
-              style={[styles.buyBtn, { opacity: trading ? 0.7 : 1 }]}
+              style={[styles.buyBtn, { opacity: (trading || insufficientBalance) ? 0.5 : 1 }]}
               onPress={handleBuy}
-              disabled={trading || priceLoading}
+              disabled={trading || priceLoading || insufficientBalance}
               activeOpacity={0.85}
             >
               {trading
@@ -451,8 +471,20 @@ const styles = StyleSheet.create({
   qtyBtn: { width: 32, height: 32, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   qtyBtnText: { fontSize: 20, lineHeight: 24 },
   qtyValue: { flex: 1, fontFamily: 'Syne_800ExtraBold', fontSize: 22, textAlign: 'center' },
-  tradeInfo: { fontFamily: 'DMSans_400Regular', fontSize: 12, marginBottom: 12 },
+  tradeInfoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  tradeInfo: { fontFamily: 'DMSans_400Regular', fontSize: 12 },
   tradeInfoVal: { fontFamily: 'DMSans_600SemiBold' },
+  balanceChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  balanceChipText: { fontFamily: 'DMSans_500Medium', fontSize: 11 },
+  warningRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+    marginBottom: 10,
+  },
+  warningText: { fontFamily: 'DMSans_500Medium', fontSize: 12, flex: 1 },
   tradeBtns: { flexDirection: 'row', gap: 12 },
   buyBtn: {
     flex: 1, backgroundColor: '#3A9BAB', borderRadius: 16,

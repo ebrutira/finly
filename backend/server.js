@@ -36,6 +36,9 @@ app.use('/notifications', notificationsRoutes);
 const watchlistRoutes = require('./routes/watchlist');
 app.use('/watchlist', watchlistRoutes);
 
+const supportRoutes = require('./routes/support');
+app.use('/support', supportRoutes);
+
 // Test endpoint
 app.get('/', (req, res) => {
     res.json({ message: 'Finly backend çalışıyor!' });

@@ -86,6 +86,7 @@ export default function DashboardScreen() {
   const xp = user?.xp ?? 0;
   const level = user?.level ?? 1;
   const streak = user?.streak ?? 0;
+  const balance = user?.balance ?? 0;
   const xpInLevel = xp % 100;
   const levelTitle = LEVEL_TITLES[level] ?? `Seviye ${level}`;
 
@@ -210,6 +211,13 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             )}
+          </View>
+          <View style={styles.heroBalanceRow}>
+            <Ionicons name="wallet-outline" size={12} color="rgba(255,255,255,0.6)" />
+            <Text style={styles.heroBalanceLabel}>Sanal Bakiye</Text>
+            <Text style={styles.heroBalanceVal}>
+              ${balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </Text>
           </View>
           <View>
             <View style={styles.xpRow}>
@@ -343,7 +351,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Syne_800ExtraBold', fontSize: 34,
     color: 'white', marginTop: 4, marginBottom: 2,
   },
-  heroChangeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  heroChangeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  heroBalanceRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start',
+  },
+  heroBalanceLabel: { fontFamily: 'DMSans_400Regular', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
+  heroBalanceVal: { fontFamily: 'DMSans_700Bold', fontSize: 11, color: 'rgba(255,255,255,0.95)' },
   heroChangeTxt: { fontFamily: 'DMSans_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.75)' },
   heroChangePill: {
     backgroundColor: 'rgba(255,255,255,0.2)',

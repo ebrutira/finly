@@ -97,10 +97,22 @@ router.post('/buy', async (req, res) => {
         const assetCount = allAssets ? allAssets.length : 0;
 
         // Görev ilerlemesi
+        const CRYPTO_SYMS = new Set(['BTC','ETH','XRP','SOL','BNB','ADA']);
+        const ETF_SYMS    = new Set(['SPY','QQQ','VTI','IVV']);
+        const FOREX_SYMS  = new Set(['USDTRY','EURTRY','EURUSD','GBPUSD','JPYUSD']);
+
         incrementQuest(req.userId, 'first_buy');
         incrementQuest(req.userId, 'ten_trades');
         incrementQuest(req.userId, 'daily_trade');
-        setQuestProgress(req.userId, 'five_assets', assetCount);
+        incrementQuest(req.userId, 'buy_10');
+        incrementQuest(req.userId, 'buy_50');
+        incrementQuest(req.userId, 'buy_100');
+        setQuestProgress(req.userId, 'five_assets',   assetCount);
+        setQuestProgress(req.userId, 'portfolio_10',  assetCount);
+        setQuestProgress(req.userId, 'portfolio_20',  assetCount);
+        if (CRYPTO_SYMS.has(sym)) incrementQuest(req.userId, 'crypto_buy');
+        if (ETF_SYMS.has(sym))    incrementQuest(req.userId, 'etf_buy');
+        if (FOREX_SYMS.has(sym))  incrementQuest(req.userId, 'forex_buy');
 
         res.json({
             message: `${sym} alındı.`,
@@ -184,6 +196,14 @@ router.post('/sell', async (req, res) => {
 
         incrementQuest(req.userId, 'ten_trades');
         incrementQuest(req.userId, 'daily_trade');
+        incrementQuest(req.userId, 'first_sell');
+
+        // Kârlı satış kontrolü
+        if (parseFloat(price) > parseFloat(old.avg_buy_price)) {
+            incrementQuest(req.userId, 'profit_trade');
+            incrementQuest(req.userId, 'profit_5');
+            incrementQuest(req.userId, 'profit_10');
+        }
 
         res.json({
             message: `${sym} satıldı.`,

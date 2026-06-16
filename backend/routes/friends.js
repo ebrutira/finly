@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { incrementQuest } = require('../helpers/questProgress');
 
 router.use(authMiddleware);
 
@@ -152,6 +153,15 @@ router.patch('/respond/:friendshipId', async (req, res) => {
             .eq('id', friendshipId);
 
         if (updateError) throw updateError;
+
+        // Her iki taraf da arkadaş kazandı
+        const { data: friendship } = await supabase
+            .from('friendships')
+            .select('requester_id')
+            .eq('id', friendshipId)
+            .single();
+        if (friendship) incrementQuest(friendship.requester_id, 'friend_add');
+        incrementQuest(req.userId, 'friend_add');
 
         res.json({ message: 'Arkadaşlık kabul edildi.' });
     } catch (err) {

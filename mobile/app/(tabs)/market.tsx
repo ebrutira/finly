@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { useColors } from '../../hooks/useColors';
@@ -91,9 +91,22 @@ export default function MarketScreen() {
   const [search, setSearch] = useState('');
   const [items, setItems] = useState<MarketItem[]>([]);
   const [currencies, setCurrencies] = useState<CurrencyItem[]>([]);
+  const [ownedMap, setOwnedMap] = useState<Record<string, number>>({});
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const C = useColors();
+
+  useFocusEffect(useCallback(() => {
+    api.get('/portfolio')
+      .then((res) => {
+        const map: Record<string, number> = {};
+        res.data.portfolio.forEach((item: { symbol: string; amount: number }) => {
+          map[item.symbol] = Number(item.amount);
+        });
+        setOwnedMap(map);
+      })
+      .catch(() => {});
+  }, []));
 
   const loadItems = async (tab: TabKey) => {
     if (tab === 'Döviz') {
@@ -217,6 +230,7 @@ export default function MarketScreen() {
         {activeTab !== 'Döviz' && filteredItems.map((item) => {
           const isUp = item.change !== null ? item.change >= 0 : true;
           const displaySymbol = item.symbol.replace('USDT', '');
+          const ownedAmt = ownedMap[displaySymbol] ?? 0;
           return (
             <TouchableOpacity
               key={item.symbol}
@@ -231,9 +245,19 @@ export default function MarketScreen() {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={[styles.itemName, { color: C.text1 }]} numberOfLines={1}>{item.name}</Text>
-                <Text style={[styles.itemSub, { color: C.textMuted }]} numberOfLines={1}>
-                  {displaySymbol} · {item.category}
-                </Text>
+                <View style={styles.itemSubRow}>
+                  <Text style={[styles.itemSub, { color: C.textMuted }]} numberOfLines={1}>
+                    {displaySymbol} · {item.category}
+                  </Text>
+                  {ownedAmt > 0 && (
+                    <View style={[styles.ownedChip, { backgroundColor: `${C.primary}18`, borderColor: `${C.primary}33` }]}>
+                      <Ionicons name="checkmark-circle" size={9} color={C.primary} />
+                      <Text style={[styles.ownedText, { color: C.primaryDim }]}>
+                        {Number.isInteger(ownedAmt) ? `${ownedAmt} adet` : ownedAmt.toFixed(4)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <View style={styles.spark}>
                 {[40, 60, 80, 70, 100].map((h, i) => (
@@ -273,6 +297,7 @@ export default function MarketScreen() {
         {/* Döviz */}
         {activeTab === 'Döviz' && filteredCurrencies.map((c) => {
           const isUp = c.change !== null ? c.change >= 0 : true;
+          const ownedAmt = ownedMap[c.routeSymbol] ?? 0;
           return (
             <TouchableOpacity
               key={`${c.from}${c.to}`}
@@ -285,7 +310,17 @@ export default function MarketScreen() {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={[styles.itemName, { color: C.text1 }]} numberOfLines={1}>{c.name}</Text>
-                <Text style={[styles.itemSub, { color: C.textMuted }]}>{c.from}/{c.to}</Text>
+                <View style={styles.itemSubRow}>
+                  <Text style={[styles.itemSub, { color: C.textMuted }]}>{c.from}/{c.to}</Text>
+                  {ownedAmt > 0 && (
+                    <View style={[styles.ownedChip, { backgroundColor: `${C.primary}18`, borderColor: `${C.primary}33` }]}>
+                      <Ionicons name="checkmark-circle" size={9} color={C.primary} />
+                      <Text style={[styles.ownedText, { color: C.primaryDim }]}>
+                        {ownedAmt.toFixed(2)} adet
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <View style={styles.spark}>
                 {[40, 60, 80, 70, 100].map((h, i) => (
@@ -351,7 +386,13 @@ const styles = StyleSheet.create({
   logo: { width: 46, height: 46, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   logoText: { fontFamily: 'DMSans_600SemiBold', fontSize: 9, letterSpacing: 0.5 },
   itemName: { fontFamily: 'DMSans_600SemiBold', fontSize: 13 },
-  itemSub: { fontFamily: 'DMSans_400Regular', fontSize: 10, marginTop: 1 },
+  itemSubRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1, flexWrap: 'wrap' },
+  itemSub: { fontFamily: 'DMSans_400Regular', fontSize: 10 },
+  ownedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    borderWidth: 1, borderRadius: 8, paddingHorizontal: 5, paddingVertical: 2,
+  },
+  ownedText: { fontFamily: 'DMSans_600SemiBold', fontSize: 9 },
   spark: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 28, width: 44 },
   sparkBar: { width: 5, borderRadius: 2 },
   price: { fontFamily: 'Syne_700Bold', fontSize: 14 },

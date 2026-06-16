@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Resend } = require('resend');
 const supabase = require('../db');
-const { incrementQuest } = require('../helpers/questProgress');
+const { incrementQuest, setQuestProgress } = require('../helpers/questProgress');
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -173,6 +173,9 @@ router.post('/login', async (req, res) => {
         if (user.last_login !== todayStr) {
             await supabase.from('users').update({ streak, last_login: todayStr }).eq('id', user.id);
             incrementQuest(user.id, 'daily_login');
+            setQuestProgress(user.id, 'streak_3',  streak);
+            setQuestProgress(user.id, 'streak_7',  streak);
+            setQuestProgress(user.id, 'streak_30', streak);
         }
 
         const token = jwt.sign(

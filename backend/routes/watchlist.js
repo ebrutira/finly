@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { incrementQuest } = require('../helpers/questProgress');
 
 router.use(authMiddleware);
 
@@ -38,6 +39,7 @@ router.post('/', async (req, res) => {
             throw error;
         }
 
+        incrementQuest(req.userId, 'watchlist_add');
         res.status(201).json({ message: `${symbol.toUpperCase()} takip listesine eklendi.` });
     } catch (err) {
         res.status(500).json({ error: 'Eklenemedi.' });

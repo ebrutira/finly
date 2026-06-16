@@ -110,7 +110,7 @@ export default function ProfileScreen() {
     { icon: 'moon-outline', label: 'Karanlık Mod', type: 'toggle' },
     { icon: 'lock-closed-outline', label: 'Şifre Değiştir', type: 'chevron', onPress: () => setPwVisible(true) },
     { icon: 'wallet-outline', label: 'Sanal Bakiye', type: 'value', value: `$${balance.toLocaleString('en-US', { maximumFractionDigits: 0 })}` },
-    { icon: 'help-circle-outline', label: 'Yardım & Destek', type: 'chevron' },
+    { icon: 'help-circle-outline', label: 'Yardım & Destek', type: 'chevron', onPress: () => router.push('/help' as any) },
   ];
 
   return (
@@ -161,11 +161,8 @@ export default function ProfileScreen() {
               {s.label === 'Karanlık Mod' ? (
                 <Switch value={isDark} onValueChange={toggle} trackColor={{ false: C.border, true: C.primary }} thumbColor="white" />
               ) : s.type === 'value' ? (
-                <>
-                  <Text style={[styles.settingVal, { color: C.textMuted }]}>{s.value}</Text>
-                  <Text style={[styles.chevron, { color: C.textMuted }]}>›</Text>
-                </>
-              ) : s.type === 'chevron' ? (
+                <Text style={[styles.settingVal, { color: C.textMuted }]}>{s.value}</Text>
+              ) : s.type === 'chevron' && s.onPress ? (
                 <Text style={[styles.chevron, { color: C.textMuted }]}>›</Text>
               ) : null}
             </TouchableOpacity>
