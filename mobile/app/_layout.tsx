@@ -27,17 +27,21 @@ function AuthGuard() {
   useEffect(() => { loadFromStorage(); }, []);
 
   useEffect(() => {
-    if (!themeLoaded) return;
-    if (!hasSetTheme) {
-      router.replace('/(auth)/theme-select');
-    }
-  }, [themeLoaded, hasSetTheme]);
+    if (!themeLoaded || isLoading) return;
 
-  useEffect(() => {
-    if (isLoading || !themeLoaded || !hasSetTheme) return;
+    const currentScreen = segments[1] as string | undefined;
     const inAuthGroup = segments[0] === '(auth)';
-    const onThemeSelect = segments[1] === 'theme-select';
-    if (onThemeSelect) return;
+
+    // Tema henüz seçilmemiş → tema seçim ekranı (zaten orada değilsek)
+    if (!hasSetTheme) {
+      if (currentScreen !== 'theme-select') {
+        router.replace('/(auth)/theme-select');
+      }
+      return;
+    }
+
+    // Tema seçimi tamamlandı, normal auth akışı
+    if (currentScreen === 'theme-select') return;
     if (!token && !inAuthGroup) {
       router.replace('/(auth)/splash');
     } else if (token && inAuthGroup) {

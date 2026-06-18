@@ -5,23 +5,20 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeStore, ACCENT_PRESETS } from '../../store/themeStore';
+import { useThemeStore } from '../../store/themeStore';
 
 const { width } = Dimensions.get('window');
 const CARD_W = (width - 60) / 2;
+const TEAL = '#3A9BAB';
 
 export default function ThemeSelectScreen() {
-  const { setTheme, setAccentKey, markThemeSet, isDark, accentKey } = useThemeStore();
+  const { setTheme, markThemeSet, isDark } = useThemeStore();
   const router = useRouter();
 
   const [selectedDark, setSelectedDark] = useState(isDark);
-  const [selectedAccent, setSelectedAccent] = useState(accentKey);
-
-  const accent = ACCENT_PRESETS.find((a) => a.key === selectedAccent) ?? ACCENT_PRESETS[0];
 
   const handleContinue = () => {
     setTheme(selectedDark);
-    setAccentKey(selectedAccent);
     markThemeSet();
     router.replace('/(auth)/splash');
   };
@@ -32,10 +29,9 @@ export default function ThemeSelectScreen() {
       style={styles.container}
     >
       <SafeAreaView style={styles.inner}>
-        {/* Logo */}
         <View style={styles.logoRow}>
-          <Text style={[styles.logoFin, { color: accent.light }]}>Fin</Text>
-          <Text style={[styles.logoLy, { color: accent.color }]}>Ly</Text>
+          <Text style={[styles.logoFin, { color: '#B5DDE3' }]}>Fin</Text>
+          <Text style={[styles.logoLy, { color: TEAL }]}>Ly</Text>
         </View>
 
         <Text style={[styles.title, { color: selectedDark ? '#E8F6F8' : '#0D2226' }]}>
@@ -45,13 +41,11 @@ export default function ThemeSelectScreen() {
           Daha sonra ayarlardan değiştirebilirsin
         </Text>
 
-        {/* Dark / Light cards */}
         <View style={styles.cardsRow}>
-          {/* Dark card */}
           <TouchableOpacity
             style={[
               styles.themeCard,
-              { borderColor: selectedDark ? accent.color : 'transparent', borderWidth: 2 },
+              { borderColor: selectedDark ? TEAL : 'transparent', borderWidth: 2 },
             ]}
             onPress={() => setSelectedDark(true)}
             activeOpacity={0.85}
@@ -61,24 +55,23 @@ export default function ThemeSelectScreen() {
                 {[40, 60, 80, 100].map((h, i) => (
                   <View
                     key={i}
-                    style={[styles.miniBar, { height: h * 0.4, backgroundColor: accent.color, opacity: 0.4 + i * 0.2 }]}
+                    style={[styles.miniBar, { height: h * 0.4, backgroundColor: TEAL, opacity: 0.4 + i * 0.2 }]}
                   />
                 ))}
               </View>
               <Text style={[styles.cardLabel, { color: '#E8F6F8' }]}>Koyu</Text>
             </LinearGradient>
             {selectedDark && (
-              <View style={[styles.checkBadge, { backgroundColor: accent.color }]}>
+              <View style={[styles.checkBadge, { backgroundColor: TEAL }]}>
                 <Ionicons name="checkmark" size={12} color="#fff" />
               </View>
             )}
           </TouchableOpacity>
 
-          {/* Light card */}
           <TouchableOpacity
             style={[
               styles.themeCard,
-              { borderColor: !selectedDark ? accent.color : 'transparent', borderWidth: 2 },
+              { borderColor: !selectedDark ? TEAL : 'transparent', borderWidth: 2 },
             ]}
             onPress={() => setSelectedDark(false)}
             activeOpacity={0.85}
@@ -88,46 +81,22 @@ export default function ThemeSelectScreen() {
                 {[40, 60, 80, 100].map((h, i) => (
                   <View
                     key={i}
-                    style={[styles.miniBar, { height: h * 0.4, backgroundColor: accent.color, opacity: 0.4 + i * 0.2 }]}
+                    style={[styles.miniBar, { height: h * 0.4, backgroundColor: TEAL, opacity: 0.4 + i * 0.2 }]}
                   />
                 ))}
               </View>
               <Text style={[styles.cardLabel, { color: '#0D2226' }]}>Açık</Text>
             </LinearGradient>
             {!selectedDark && (
-              <View style={[styles.checkBadge, { backgroundColor: accent.color }]}>
+              <View style={[styles.checkBadge, { backgroundColor: TEAL }]}>
                 <Ionicons name="checkmark" size={12} color="#fff" />
               </View>
             )}
           </TouchableOpacity>
         </View>
 
-        {/* Accent color */}
-        <Text style={[styles.accentTitle, { color: selectedDark ? '#6A9AA2' : '#3A7A84' }]}>
-          Vurgu Rengi
-        </Text>
-        <View style={styles.swatchRow}>
-          {ACCENT_PRESETS.map((a) => (
-            <TouchableOpacity
-              key={a.key}
-              style={[
-                styles.swatch,
-                { backgroundColor: a.color },
-                selectedAccent === a.key && styles.swatchSelected,
-              ]}
-              onPress={() => setSelectedAccent(a.key)}
-              activeOpacity={0.8}
-            >
-              {selectedAccent === a.key && (
-                <Ionicons name="checkmark" size={14} color="#fff" />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Continue button */}
         <TouchableOpacity
-          style={[styles.btn, { backgroundColor: accent.color }]}
+          style={[styles.btn, { backgroundColor: TEAL }]}
           onPress={handleContinue}
           activeOpacity={0.85}
         >
@@ -151,7 +120,7 @@ const styles = StyleSheet.create({
   logoLy:  { fontFamily: 'Syne_800ExtraBold', fontSize: 36, letterSpacing: -1 },
   title: { fontFamily: 'Syne_700Bold', fontSize: 22, marginBottom: 6 },
   sub: { fontFamily: 'DMSans_400Regular', fontSize: 13, marginBottom: 32 },
-  cardsRow: { flexDirection: 'row', gap: 12, marginBottom: 32, width: '100%' },
+  cardsRow: { flexDirection: 'row', gap: 12, marginBottom: 48, width: '100%' },
   themeCard: {
     width: CARD_W,
     borderRadius: 20,
@@ -177,23 +146,6 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  accentTitle: { fontFamily: 'DMSans_500Medium', fontSize: 13, marginBottom: 14, alignSelf: 'flex-start' },
-  swatchRow: { flexDirection: 'row', gap: 12, marginBottom: 40, alignSelf: 'flex-start' },
-  swatch: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swatchSelected: {
-    borderWidth: 3,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
   },
   btn: {
     width: '100%',

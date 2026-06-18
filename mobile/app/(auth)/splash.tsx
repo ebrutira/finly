@@ -4,6 +4,7 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useColors } from '../../hooks/useColors';
+import { useThemeStore } from '../../store/themeStore';
 
 const features = [
   { icon: '↗', label: 'Gerçek\nPiyasa' },
@@ -14,10 +15,11 @@ const features = [
 export default function SplashScreen() {
   const router = useRouter();
   const C = useColors();
+  const isDark = useThemeStore((s) => s.isDark);
 
   return (
     <LinearGradient
-      colors={['#071820', '#0A1E24', '#071215']}
+      colors={isDark ? ['#071820', '#0A1E24', '#071215'] : ['#EEF9FA', '#F0F8FA', '#E8F5F7']}
       style={styles.container}
     >
       <SafeAreaView style={styles.inner}>
