@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import api from '../services/api';
@@ -67,6 +68,13 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      // Bildirime tiklaninca uygulamayi on plana getir, hic bir sey yapma
+    });
+    return () => sub.remove();
+  }, []);
+
   const [fontsLoaded] = useFonts({
     Syne_600SemiBold,
     Syne_700Bold,
