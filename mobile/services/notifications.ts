@@ -1,7 +1,12 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import api from './api';
+
+export const getNotifications = () => api.get('/notifications');
+export const readAll = () => api.patch('/notifications/read-all');
+export const readOne = (id: number) => api.patch(`/notifications/${id}/read`);
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -30,7 +35,9 @@ export async function setupNotifications(): Promise<void> {
 
   if (final !== 'granted') return;
 
-  if (Device.isDevice) {
+  // Expo Go'da remote push token desteklenmiyor (SDK 53+), sadece dev build/APK'da kaydet
+  const isExpoGo = Constants.appOwnership === 'expo';
+  if (Device.isDevice && !isExpoGo) {
     try {
       const tokenData = await Notifications.getExpoPushTokenAsync({
         projectId: '3fd73e7b-1f33-4d4a-8d58-fdb03c8c3ac3',

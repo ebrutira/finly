@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { LogBox } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../store/authStore';
@@ -19,6 +20,7 @@ import {
 } from '@expo-google-fonts/dm-sans';
 
 SplashScreen.preventAutoHideAsync();
+LogBox.ignoreLogs(['expo-notifications: Android Push notifications']);
 
 function AuthGuard() {
   const { token, isLoading, loadFromStorage, updateUser } = useAuthStore();
