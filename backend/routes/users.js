@@ -86,4 +86,16 @@ router.patch('/password', async (req, res) => {
     }
 });
 
+// ─── PUSH TOKEN KAYDET ───────────────────────────────────
+router.post('/push-token', async (req, res) => {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token gereklidir.' });
+    try {
+        await supabase.from('users').update({ push_token: token }).eq('id', req.userId);
+        res.json({ message: 'Token kaydedildi.' });
+    } catch {
+        res.status(500).json({ error: 'Token kaydedilemedi.' });
+    }
+});
+
 module.exports = router;

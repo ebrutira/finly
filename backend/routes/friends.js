@@ -3,6 +3,7 @@ const router = express.Router();
 const supabase = require('../db');
 const authMiddleware = require('../middleware/auth');
 const { incrementQuest } = require('../helpers/questProgress');
+const { notify } = require('../helpers/pushNotifications');
 
 router.use(authMiddleware);
 
@@ -112,6 +113,17 @@ router.post('/request', async (req, res) => {
             .insert({ requester_id: req.userId, receiver_id: target.id });
 
         if (error) throw error;
+
+        const { data: sender } = await supabase.from('users').select('name').eq('id', req.userId).single();
+        await notify(target.id, {
+            icon: 'person-add-outline',
+            type: 'primary',
+            text: `${sender?.name || 'Biri'} size arkadaslik istegi gonderdi.`,
+            push: {
+                title: 'Yeni Arkadaslik Istegi',
+                body: `${sender?.name || 'Biri'} sizi arkadas olarak ekledi.`,
+            },
+        });
 
         res.status(201).json({ message: `${target.name} adlı kullanıcıya istek gönderildi.` });
     } catch (err) {

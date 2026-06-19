@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import api from '../services/api';
+import { setupNotifications } from '../services/notifications';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import {
@@ -23,6 +24,7 @@ function AuthGuard() {
   const { themeLoaded, hasSetTheme } = useThemeStore();
   const router = useRouter();
   const segments = useSegments();
+  const notificationsSetup = useRef(false);
 
   useEffect(() => { loadFromStorage(); }, []);
 
@@ -55,6 +57,10 @@ function AuthGuard() {
     api.get('/users/me')
       .then((res) => updateUser(res.data.user))
       .catch(() => {});
+    if (!notificationsSetup.current) {
+      notificationsSetup.current = true;
+      setupNotifications().catch(() => {});
+    }
   }, [token]);
 
   return null;

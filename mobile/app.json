@@ -16,19 +16,20 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.finly.app"
     },
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon_light.png",
     "android": {
       "package": "com.finly.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#071215"
+        "foregroundImage": "./assets/icon_light.png",
+        "backgroundColor": "#EEF9FA"
       }
     },
     "scheme": "finly",
     "plugins": [
       "expo-router",
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "expo-notifications"
     ],
     "extra": {
       "router": {},
