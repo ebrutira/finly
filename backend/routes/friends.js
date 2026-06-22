@@ -4,6 +4,9 @@ const supabase = require('../db');
 const authMiddleware = require('../middleware/auth');
 const { incrementQuest } = require('../helpers/questProgress');
 const { notify } = require('../helpers/pushNotifications');
+const { getCurrentPrice } = require('../helpers/prices');
+
+const STARTING_BALANCE = 10000;
 
 router.use(authMiddleware);
 
@@ -198,19 +201,38 @@ router.get('/leaderboard', async (req, res) => {
         // Kendisini de ekle
         const ids = [...new Set([req.userId, ...friendIds])];
 
-        const { data, error } = await supabase
+        const { data: users, error } = await supabase
             .from('users')
-            .select('id, name, xp, level')
-            .in('id', ids)
-            .order('xp', { ascending: false });
+            .select('id, name, xp, level, balance')
+            .in('id', ids);
 
         if (error) throw error;
 
-        const leaderboard = data.map((u, index) => ({
-            ...u,
-            rank: index + 1,
-            isMe: u.id === req.userId,
-        }));
+        const { data: holdings } = await supabase
+            .from('portfolio')
+            .select('user_id, symbol, amount, avg_buy_price')
+            .in('user_id', ids);
+
+        const symbols = [...new Set((holdings || []).map((h) => h.symbol))];
+        const prices = {};
+        for (const sym of symbols) {
+            prices[sym] = await getCurrentPrice(sym);
+        }
+
+        const portfolioValueByUser = {};
+        for (const h of holdings || []) {
+            const price = prices[h.symbol] ?? parseFloat(h.avg_buy_price);
+            portfolioValueByUser[h.user_id] =
+                (portfolioValueByUser[h.user_id] ?? 0) + parseFloat(h.amount) * price;
+        }
+
+        const leaderboard = users
+            .map((u) => {
+                const netWorth = parseFloat(u.balance) + (portfolioValueByUser[u.id] ?? 0);
+                return { ...u, profit: netWorth - STARTING_BALANCE, isMe: u.id === req.userId };
+            })
+            .sort((a, b) => b.profit - a.profit)
+            .map((u, index) => ({ ...u, rank: index + 1 }));
 
         res.json({ leaderboard });
     } catch (err) {

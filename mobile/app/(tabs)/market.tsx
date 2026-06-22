@@ -157,6 +157,15 @@ export default function MarketScreen() {
     loadItems(activeTab);
   }, [activeTab]);
 
+  useFocusEffect(
+    useCallback(() => {
+      const interval = setInterval(() => {
+        loadItems(activeTab);
+      }, 60000);
+      return () => clearInterval(interval);
+    }, [activeTab])
+  );
+
   const filteredItems = items.filter(
     (i) =>
       i.name.toLowerCase().includes(search.toLowerCase()) ||

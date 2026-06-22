@@ -53,6 +53,7 @@ app.listen(PORT, () => {
 // ─── ZAMANLANMIŞ BİLDİRİMLER ─────────────────────────────
 const supabase = require('./db');
 const { sendPush, notify } = require('./helpers/pushNotifications');
+const { getCurrentPrice } = require('./helpers/prices');
 const yahooFinance = require('yahoo-finance2').default;
 
 // Gunluk hatirlat — 17:00 UTC = 20:00 Istanbul
@@ -128,4 +129,32 @@ cron.schedule('0 */2 * * 1-5', async () => {
             },
         });
     }
+});
+
+// Gunluk portfoy snapshot — 00:05 UTC
+cron.schedule('5 0 * * *', async () => {
+    const { data: holdings } = await supabase
+        .from('portfolio').select('user_id, symbol, amount, avg_buy_price');
+    if (!holdings?.length) return;
+
+    const symbols = [...new Set(holdings.map((h) => h.symbol))];
+    const prices = {};
+    for (const sym of symbols) {
+        prices[sym] = await getCurrentPrice(sym);
+    }
+
+    const byUser = {};
+    for (const h of holdings) {
+        const price = prices[h.symbol] ?? parseFloat(h.avg_buy_price);
+        byUser[h.user_id] = (byUser[h.user_id] ?? 0) + parseFloat(h.amount) * price;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const rows = Object.entries(byUser).map(([user_id, total_value]) => ({
+        user_id: Number(user_id),
+        total_value,
+        snapshot_date: today,
+    }));
+
+    await supabase.from('portfolio_snapshots').upsert(rows, { onConflict: 'user_id,snapshot_date' });
 });

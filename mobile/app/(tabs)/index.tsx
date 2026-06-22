@@ -141,6 +141,16 @@ export default function DashboardScreen() {
   // Tab'a her dönüşte yeniler
   useFocusEffect(useCallback(() => { if (user) fetchPortfolio(); }, [user?.id]));
 
+  // Tab açıkken dakikada bir otomatik yeniler
+  useFocusEffect(
+    useCallback(() => {
+      const interval = setInterval(() => {
+        if (user) fetchPortfolio();
+      }, 60000);
+      return () => clearInterval(interval);
+    }, [user?.id])
+  );
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: C.bg2 }]}>

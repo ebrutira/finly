@@ -15,7 +15,7 @@ type FriendTab = 'Arkadaşlar' | 'Sıralama' | 'İstekler';
 
 interface Friend { id: number; name: string; email: string; xp: number; level: number; }
 interface Request { friendship_id: number; user: Friend; }
-interface LeaderEntry { id: number; name: string; xp: number; level: number; rank: number; isMe: boolean; }
+interface LeaderEntry { id: number; name: string; xp: number; level: number; profit: number; rank: number; isMe: boolean; }
 
 export default function FriendsScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
@@ -161,30 +161,35 @@ export default function FriendsScreen() {
               </View>
             ) : (
               <>
-                <Text style={[styles.sectionTitle, { color: C.text1 }]}>Haftalık Liderlik</Text>
-                {leaderboard.map((entry) => (
-                  <View
-                    key={entry.id}
-                    style={[
-                      styles.friendRow,
-                      entry.isMe && { backgroundColor: `${C.primary}0D` },
-                    ]}
-                  >
-                    <Text style={[styles.rankBig, { color: C.primaryDim }]}>#{entry.rank}</Text>
-                    <View style={[styles.avatar, { backgroundColor: entry.isMe ? C.primary : C.bgCard, borderWidth: entry.isMe ? 0 : 1, borderColor: C.border }]}>
-                      <Text style={[styles.avatarText, { color: entry.isMe ? C.bg : C.text3 }]}>
-                        {entry.name.charAt(0).toUpperCase()}
-                      </Text>
+                <Text style={[styles.sectionTitle, { color: C.text1 }]}>Kâr Sıralaması</Text>
+                {leaderboard.map((entry) => {
+                  const isUp = entry.profit >= 0;
+                  return (
+                    <View
+                      key={entry.id}
+                      style={[
+                        styles.friendRow,
+                        entry.isMe && { backgroundColor: `${C.primary}0D` },
+                      ]}
+                    >
+                      <Text style={[styles.rankBig, { color: C.primaryDim }]}>#{entry.rank}</Text>
+                      <View style={[styles.avatar, { backgroundColor: entry.isMe ? C.primary : C.bgCard, borderWidth: entry.isMe ? 0 : 1, borderColor: C.border }]}>
+                        <Text style={[styles.avatarText, { color: entry.isMe ? C.bg : C.text3 }]}>
+                          {entry.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.friendName, { color: C.text1 }]}>
+                          {entry.name}{entry.isMe ? ' (Sen)' : ''}
+                        </Text>
+                        <Text style={[styles.friendSub, { color: isUp ? C.success : C.danger }]}>
+                          {isUp ? '+' : ''}${entry.profit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                        </Text>
+                      </View>
+                      {entry.rank === 1 && <Text style={{ fontSize: 20 }}>🏆</Text>}
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.friendName, { color: C.text1 }]}>
-                        {entry.name}{entry.isMe ? ' (Sen)' : ''}
-                      </Text>
-                      <Text style={[styles.friendSub, { color: C.textMuted }]}>{entry.xp} XP</Text>
-                    </View>
-                    {entry.rank === 1 && <Text style={{ fontSize: 20 }}>🏆</Text>}
-                  </View>
-                ))}
+                  );
+                })}
               </>
             )
           )}

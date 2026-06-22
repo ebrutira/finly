@@ -234,4 +234,20 @@ router.get('/trades', async (req, res) => {
     }
 });
 
+// ─── PORTFÖY DEĞERİ GEÇMİŞİ ──────────────────────────────
+router.get('/history', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('portfolio_snapshots')
+            .select('snapshot_date, total_value')
+            .eq('user_id', req.userId)
+            .order('snapshot_date', { ascending: true });
+
+        if (error) throw error;
+        res.json({ history: data });
+    } catch (err) {
+        res.status(500).json({ error: 'Portföy geçmişi alınamadı.' });
+    }
+});
+
 module.exports = router;

@@ -45,6 +45,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="portfolio"
+        options={{
+          title: 'Portföyüm',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="pie-chart-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="quests"
         options={{
           title: 'Görevler',

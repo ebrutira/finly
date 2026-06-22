@@ -31,11 +31,13 @@ CREATE TABLE trades (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE badges (
+CREATE TABLE portfolio_snapshots (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id),
-  badge_name VARCHAR(50) NOT NULL,
-  earned_at TIMESTAMP DEFAULT NOW()
+  total_value DECIMAL(15,2) NOT NULL,
+  snapshot_date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, snapshot_date)
 );
 
 CREATE TABLE friendships (

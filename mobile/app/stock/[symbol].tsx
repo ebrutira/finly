@@ -61,17 +61,26 @@ export default function StockDetailScreen() {
   const closeModal = () => setModal((m) => ({ ...m, visible: false }));
 
   // Anlık fiyat
-  useEffect(() => {
+  const fetchPrice = useCallback(() => {
     const endpoint = isForex
       ? `/market/forex/${sym}`
       : isCrypto
       ? `/market/crypto/${sym}USDT`
       : `/market/stock/${sym}`;
-    api.get(endpoint)
+    return api.get(endpoint)
       .then((res) => setPrice(Number(res.data.price)))
       .catch(() => setPrice(null))
       .finally(() => setPriceLoading(false));
-  }, [sym]);
+  }, [sym, isForex, isCrypto]);
+
+  useEffect(() => {
+    fetchPrice();
+  }, [fetchPrice]);
+
+  useEffect(() => {
+    const interval = setInterval(fetchPrice, 60000);
+    return () => clearInterval(interval);
+  }, [fetchPrice]);
 
   // Watchlist durumu
   useEffect(() => {
