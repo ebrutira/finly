@@ -108,18 +108,6 @@ router.get('/history/crypto/:symbol', async (req, res) => {
   }
 });
 
-// ─── DÖVİZ (ExchangeRate) — eski endpoint, geriye uyumluluk ─
-router.get('/currency/:from/:to', async (req, res) => {
-  try {
-    const response = await axios.get(
-      `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_KEY}/pair/${req.params.from.toUpperCase()}/${req.params.to.toUpperCase()}`
-    );
-    res.json({ from: req.params.from.toUpperCase(), to: req.params.to.toUpperCase(), rate: response.data.conversion_rate });
-  } catch {
-    res.status(500).json({ error: 'Döviz kuru alınamadı.' });
-  }
-});
-
 // ─── DÖVİZ ANLİK FİYAT + DEĞİŞİM (Yahoo Finance) ────────
 // pair: USDTRY, EURUSD vs. → Yahoo sembolü: USDTRY=X
 router.get('/forex/:pair', async (req, res) => {

@@ -6,8 +6,6 @@ export const register = (name: string, email: string, password: string) =>
 export const login = (email: string, password: string) =>
   api.post('/auth/login', { email, password });
 
-export const getMe = () => api.get('/auth/me');
-
 export const verifyEmail = (email: string, otp: string) =>
   api.post('/auth/verify-email', { email, otp });
 
