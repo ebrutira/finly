@@ -7,6 +7,9 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import api from '../../services/api';
 import { getPortfolio, getTrades, getPortfolioHistory } from '../../services/portfolio';
 import { useColors } from '../../hooks/useColors';
+import { useAuthStore } from '../../store/authStore';
+
+const STARTING_BALANCE = 10000;
 
 const CRYPTO_SYMBOLS = new Set(['BTC', 'ETH', 'XRP', 'SOL', 'BNB', 'ADA']);
 const FOREX_PAIRS = new Set(['USDTRY', 'EURTRY', 'EURUSD', 'GBPUSD', 'JPYUSD']);
@@ -62,10 +65,13 @@ export default function PortfolioScreen() {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [history, setHistory] = useState<Snapshot[]>([]);
+  const [peakProfit, setPeakProfit] = useState(0);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const C = useColors();
+  const { user } = useAuthStore();
+  const balance = user?.balance ?? 0;
 
   const fetchAll = useCallback(async () => {
     try {
@@ -76,9 +82,17 @@ export default function PortfolioScreen() {
       ]);
       const items: Holding[] = portfolioRes.data.portfolio;
       const prices = await Promise.all(items.map((i) => fetchCurrentPrice(i.symbol)));
-      setHoldings(items.map((item, idx) => ({ ...item, currentPrice: prices[idx] })));
+      setHoldings((prev) => {
+        // Fiyat çekme başarısız olursa (null) son bilinen fiyatı koru
+        const prevPriceBySymbol = new Map(prev.map((p) => [p.symbol, p.currentPrice]));
+        return items.map((item, idx) => ({
+          ...item,
+          currentPrice: prices[idx] ?? prevPriceBySymbol.get(item.symbol) ?? null,
+        }));
+      });
       setTrades(tradesRes.data.trades ?? []);
       setHistory(historyRes.data.history ?? []);
+      setPeakProfit(Number(portfolioRes.data.peakProfit ?? 0));
     } catch (err) {
       console.error(err);
     } finally {
@@ -117,6 +131,10 @@ export default function PortfolioScreen() {
   const totalPnl = totalValue - totalCost;
   const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
   const isTotalUp = totalPnl >= 0;
+
+  const totalAccountProfit = Number(balance) + totalValue - STARTING_BALANCE;
+  const isAccountUp = totalAccountProfit >= 0;
+  const isPeakUp = peakProfit >= 0;
 
   const allocation = [...enriched]
     .sort((a, b) => b.value - a.value)
@@ -158,11 +176,27 @@ export default function PortfolioScreen() {
                   ${totalCost.toLocaleString('en-US', { maximumFractionDigits: 2 })}
                 </Text>
               </View>
-              <View style={[styles.summaryRow, { marginBottom: 0 }]}>
-                <Text style={[styles.summaryLabel, { color: C.textMuted }]}>Kâr/Zarar</Text>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: C.textMuted }]}>Açık Pozisyon K/Z</Text>
                 <View style={[styles.badge, { backgroundColor: isTotalUp ? C.successBg : C.dangerBg }]}>
                   <Text style={[styles.badgeText, { color: isTotalUp ? C.success : C.danger }]}>
                     {isTotalUp ? '+' : ''}${totalPnl.toLocaleString('en-US', { maximumFractionDigits: 2 })} ({isTotalUp ? '+' : ''}{totalPnlPct.toFixed(1)}%)
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: C.textMuted }]}>Toplam Hesap Kârı</Text>
+                <View style={[styles.badge, { backgroundColor: isAccountUp ? C.successBg : C.dangerBg }]}>
+                  <Text style={[styles.badgeText, { color: isAccountUp ? C.success : C.danger }]}>
+                    {isAccountUp ? '+' : ''}${totalAccountProfit.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.summaryRow, { marginBottom: 0 }]}>
+                <Text style={[styles.summaryLabel, { color: C.textMuted }]}>En Yüksek Kâr (Tüm Zamanlar)</Text>
+                <View style={[styles.badge, { backgroundColor: isPeakUp ? C.successBg : C.dangerBg }]}>
+                  <Text style={[styles.badgeText, { color: isPeakUp ? C.success : C.danger }]}>
+                    {isPeakUp ? '+' : ''}${peakProfit.toLocaleString('en-US', { maximumFractionDigits: 2 })}
                   </Text>
                 </View>
               </View>

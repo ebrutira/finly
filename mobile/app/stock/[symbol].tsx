@@ -61,17 +61,25 @@ export default function StockDetailScreen() {
   const closeModal = () => setModal((m) => ({ ...m, visible: false }));
 
   // Anlık fiyat
-  const fetchPrice = useCallback(() => {
+  const fetchLivePrice = useCallback(async (): Promise<number | null> => {
     const endpoint = isForex
       ? `/market/forex/${sym}`
       : isCrypto
       ? `/market/crypto/${sym}USDT`
       : `/market/stock/${sym}`;
-    return api.get(endpoint)
-      .then((res) => setPrice(Number(res.data.price)))
-      .catch(() => setPrice(null))
-      .finally(() => setPriceLoading(false));
+    try {
+      const res = await api.get(endpoint);
+      return Number(res.data.price);
+    } catch {
+      return null;
+    }
   }, [sym, isForex, isCrypto]);
+
+  const fetchPrice = useCallback(async () => {
+    const live = await fetchLivePrice();
+    setPrice(live);
+    setPriceLoading(false);
+  }, [fetchLivePrice]);
 
   useEffect(() => {
     fetchPrice();
@@ -131,14 +139,11 @@ export default function StockDetailScreen() {
     }
   };
 
-  const handleBuy = async () => {
-    if (!price) {
-      setModal({ visible: true, type: 'error', title: 'Hata', message: 'Fiyat bilgisi alınamadı.' });
-      return;
-    }
+  const executeBuy = async (buyPrice: number) => {
+    closeModal();
     setTrading(true);
     try {
-      const res = await api.post('/portfolio/buy', { symbol: sym, quantity, price });
+      const res = await api.post('/portfolio/buy', { symbol: sym, quantity, price: buyPrice });
       if (res.data.balance !== undefined) {
         updateUser({ balance: res.data.balance, xp: res.data.xp, level: res.data.level });
       }
@@ -147,7 +152,7 @@ export default function StockDetailScreen() {
         visible: true,
         type: 'success',
         title: 'Alım Başarılı!',
-        message: `${quantity} adet ${displayName} portföyüne eklendi.\nToplam: $${(price * quantity).toFixed(2)}`,
+        message: `${quantity} adet ${displayName} portföyüne eklendi.\nToplam: $${(buyPrice * quantity).toFixed(2)}`,
         xp: 10,
       });
     } catch (err: any) {
@@ -157,12 +162,35 @@ export default function StockDetailScreen() {
     }
   };
 
-  const executeSell = async () => {
-    if (!price) return;
+  const checkPriceAndBuy = async () => {
+    if (!price) {
+      setModal({ visible: true, type: 'error', title: 'Hata', message: 'Fiyat bilgisi alınamadı.' });
+      return;
+    }
+    setTrading(true);
+    const live = await fetchLivePrice();
+    setTrading(false);
+
+    if (live != null && Math.abs(live - price) >= 0.01) {
+      setPrice(live);
+      setModal({
+        visible: true,
+        type: 'confirm',
+        title: 'Fiyat Değişti',
+        message: `${displayName} için yeni fiyat: $${live.toFixed(2)}\n${quantity} adet bu fiyattan almak istiyor musun?`,
+        onConfirm: () => executeBuy(live),
+      });
+      return;
+    }
+
+    executeBuy(live ?? price);
+  };
+
+  const executeSell = async (sellPrice: number) => {
     closeModal();
     setTrading(true);
     try {
-      const res = await api.post('/portfolio/sell', { symbol: sym, quantity, price });
+      const res = await api.post('/portfolio/sell', { symbol: sym, quantity, price: sellPrice });
       if (res.data.balance !== undefined) {
         updateUser({ balance: res.data.balance, xp: res.data.xp, level: res.data.level });
       }
@@ -171,7 +199,7 @@ export default function StockDetailScreen() {
         visible: true,
         type: 'success',
         title: 'Satış Başarılı!',
-        message: `${quantity} adet ${displayName} portföyünden satıldı.\nToplam: $${(price * quantity).toFixed(2)}`,
+        message: `${quantity} adet ${displayName} portföyünden satıldı.\nToplam: $${(sellPrice * quantity).toFixed(2)}`,
         xp: 5,
       });
     } catch (err: any) {
@@ -181,17 +209,23 @@ export default function StockDetailScreen() {
     }
   };
 
-  const handleSell = () => {
+  const handleSell = async () => {
     if (!price) {
       setModal({ visible: true, type: 'error', title: 'Hata', message: 'Fiyat bilgisi alınamadı.' });
       return;
     }
+    setTrading(true);
+    const live = await fetchLivePrice();
+    setTrading(false);
+    const finalPrice = live ?? price;
+    if (live != null && Math.abs(live - price) >= 0.01) setPrice(live);
+
     setModal({
       visible: true,
       type: 'confirm',
       title: 'Satışı Onayla',
-      message: `${quantity} adet ${displayName} satmak istediğine emin misin?\nToplam: $${(price * quantity).toFixed(2)}`,
-      onConfirm: executeSell,
+      message: `${quantity} adet ${displayName} satmak istediğine emin misin?\nToplam: $${(finalPrice * quantity).toFixed(2)}`,
+      onConfirm: () => executeSell(finalPrice),
     });
   };
 
@@ -374,7 +408,7 @@ export default function StockDetailScreen() {
           <View style={styles.tradeBtns}>
             <TouchableOpacity
               style={[styles.buyBtn, { opacity: (trading || insufficientBalance) ? 0.5 : 1 }]}
-              onPress={handleBuy}
+              onPress={checkPriceAndBuy}
               disabled={trading || priceLoading || insufficientBalance}
               activeOpacity={0.85}
             >

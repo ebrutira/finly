@@ -115,18 +115,24 @@ export default function DashboardScreen() {
         })),
       ]);
 
-      const withPrices = items.map((item, idx) => ({ ...item, currentPrice: prices[idx] }));
-      // isUp'ı gerçek fiyatla yeniden hesapla, sparkline'ı güncelle
-      const final = withPrices.map((item, idx) => {
-        const current = item.currentPrice ?? Number(item.avg_buy_price);
-        const isUp = current >= Number(item.avg_buy_price);
-        const isCrypto = CRYPTO_SYMBOLS.has(item.symbol);
-        return {
+      setPortfolio((prev) => {
+        // Fiyat çekme başarısız olursa (null) son bilinen fiyatı koru, maliyet bazına düşme
+        const prevPriceBySymbol = new Map(prev.map((p) => [p.symbol, p.currentPrice]));
+        const withPrices = items.map((item, idx) => ({
           ...item,
-          sparkline: isCrypto ? sparks[idx] : deterministicSpark(item.symbol, isUp),
-        };
+          currentPrice: prices[idx] ?? prevPriceBySymbol.get(item.symbol) ?? null,
+        }));
+        // isUp'ı gerçek fiyatla yeniden hesapla, sparkline'ı güncelle
+        return withPrices.map((item, idx) => {
+          const current = item.currentPrice ?? Number(item.avg_buy_price);
+          const isUp = current >= Number(item.avg_buy_price);
+          const isCrypto = CRYPTO_SYMBOLS.has(item.symbol);
+          return {
+            ...item,
+            sparkline: isCrypto ? sparks[idx] : deterministicSpark(item.symbol, isUp),
+          };
+        });
       });
-      setPortfolio(final);
     } catch (err) {
       console.error(err);
     } finally {

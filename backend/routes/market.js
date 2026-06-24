@@ -74,13 +74,17 @@ router.get('/history/stock/:symbol', async (req, res) => {
   }
 });
 
-// ─── KRİPTO (Binance) — değişmedi ────────────────────────
+// ─── KRİPTO (Binance) — anlık fiyat + 24sa değişim ───────
 router.get('/crypto/:symbol', async (req, res) => {
   try {
     const response = await axios.get(
-      `https://api.binance.com/api/v3/ticker/price?symbol=${req.params.symbol.toUpperCase()}`
+      `https://api.binance.com/api/v3/ticker/24hr?symbol=${req.params.symbol.toUpperCase()}`
     );
-    res.json(response.data);
+    res.json({
+      symbol: response.data.symbol,
+      price: response.data.lastPrice,
+      change: parseFloat(response.data.priceChangePercent),
+    });
   } catch {
     res.status(500).json({ error: 'Kripto fiyatı alınamadı.' });
   }

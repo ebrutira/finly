@@ -3,6 +3,7 @@ const router = express.Router();
 const supabase = require('../db');
 const authMiddleware = require('../middleware/auth');
 const { incrementQuest, setQuestProgress } = require('../helpers/questProgress');
+const { updatePeakProfit } = require('../helpers/prices');
 
 router.use(authMiddleware);
 
@@ -15,7 +16,11 @@ router.get('/', async (req, res) => {
             .eq('user_id', req.userId);
 
         if (error) throw error;
-        res.json({ portfolio: data });
+
+        const { data: userData } = await supabase
+            .from('users').select('peak_profit').eq('id', req.userId).single();
+
+        res.json({ portfolio: data, peakProfit: parseFloat(userData?.peak_profit ?? 0) });
     } catch (err) {
         res.status(500).json({ error: 'Portföy alınamadı.' });
     }
@@ -114,6 +119,8 @@ router.post('/buy', async (req, res) => {
         if (ETF_SYMS.has(sym))    incrementQuest(req.userId, 'etf_buy');
         if (FOREX_SYMS.has(sym))  incrementQuest(req.userId, 'forex_buy');
 
+        updatePeakProfit(req.userId);
+
         res.json({
             message: `${sym} alındı.`,
             balance: newBalance,
@@ -204,6 +211,8 @@ router.post('/sell', async (req, res) => {
             incrementQuest(req.userId, 'profit_5');
             incrementQuest(req.userId, 'profit_10');
         }
+
+        updatePeakProfit(req.userId);
 
         res.json({
             message: `${sym} satıldı.`,

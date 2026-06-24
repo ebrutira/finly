@@ -220,18 +220,23 @@ router.get('/leaderboard', async (req, res) => {
         }
 
         const portfolioValueByUser = {};
+        const costBasisByUser = {};
         for (const h of holdings || []) {
             const price = prices[h.symbol] ?? parseFloat(h.avg_buy_price);
             portfolioValueByUser[h.user_id] =
                 (portfolioValueByUser[h.user_id] ?? 0) + parseFloat(h.amount) * price;
+            costBasisByUser[h.user_id] =
+                (costBasisByUser[h.user_id] ?? 0) + parseFloat(h.amount) * parseFloat(h.avg_buy_price);
         }
 
         const leaderboard = users
             .map((u) => {
                 const netWorth = parseFloat(u.balance) + (portfolioValueByUser[u.id] ?? 0);
-                return { ...u, profit: netWorth - STARTING_BALANCE, isMe: u.id === req.userId };
+                const totalProfit = netWorth - STARTING_BALANCE;
+                const currentProfit = (portfolioValueByUser[u.id] ?? 0) - (costBasisByUser[u.id] ?? 0);
+                return { ...u, totalProfit, currentProfit, isMe: u.id === req.userId };
             })
-            .sort((a, b) => b.profit - a.profit)
+            .sort((a, b) => b.totalProfit - a.totalProfit)
             .map((u, index) => ({ ...u, rank: index + 1 }));
 
         res.json({ leaderboard });

@@ -11,6 +11,9 @@ CREATE TABLE users (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Tüm zamanların en yüksek toplam hesap kârı (peak), Supabase SQL Editor'da çalıştır:
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS peak_profit DECIMAL(15,2) DEFAULT 0;
+
 CREATE TABLE portfolio (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id),

@@ -56,6 +56,8 @@ const { sendPush, notify } = require('./helpers/pushNotifications');
 const { getCurrentPrice } = require('./helpers/prices');
 const yahooFinance = require('yahoo-finance2').default;
 
+const STARTING_BALANCE = 10000;
+
 // Gunluk hatirlat — 17:00 UTC = 20:00 Istanbul
 cron.schedule('0 17 * * *', async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -157,4 +159,16 @@ cron.schedule('5 0 * * *', async () => {
     }));
 
     await supabase.from('portfolio_snapshots').upsert(rows, { onConflict: 'user_id,snapshot_date' });
+
+    // Peak kâr kontrolü — aynı gün için zaten çekilen fiyatlar/değerler tekrar kullanılır
+    const userIds = Object.keys(byUser).map(Number);
+    const { data: usersData } = await supabase
+        .from('users').select('id, balance, peak_profit').in('id', userIds);
+
+    for (const u of usersData || []) {
+        const currentTotalProfit = parseFloat(u.balance) + byUser[u.id] - STARTING_BALANCE;
+        if (currentTotalProfit > parseFloat(u.peak_profit ?? 0)) {
+            await supabase.from('users').update({ peak_profit: currentTotalProfit }).eq('id', u.id);
+        }
+    }
 });
